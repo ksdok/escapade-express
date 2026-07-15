@@ -1,0 +1,11 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Python (scripts temporaires)
+__pycache__/
+*.pyc
+
+# Zomboid runtime (jamais dans le repo)
+Zomboid/
+*.log

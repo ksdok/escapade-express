@@ -1,0 +1,6 @@
+name=Escapade Express
+id=EscapadeExpress
+description=Scenario coop 4 joueurs: echappez du Xonic's Mega Mall en 3h! 4 roles uniques, evenements scriptes, vehicule a trouver.
+poster=poster.png
+require=PillowsRandomScenarios
+author=Kim
