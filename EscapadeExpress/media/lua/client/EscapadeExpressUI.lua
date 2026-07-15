@@ -13,6 +13,9 @@ local COLOR_RED = {1, 0.2, 0.2, 1}
 local COLOR_BG = {0, 0, 0, 0.6}
 
 local DURATION_HOURS = 3
+local HUD_MARGIN_X = 20
+local HUD_MARGIN_Y = 20
+local HUD_LINE_GAP = 24
 
 -- Messages temporaires (fondu)
 UI.messages = {}
@@ -31,14 +34,25 @@ local function getNowSeconds()
 end
 
 -- ============================================================
+-- OUTILS DE POSITIONNEMENT HUD
+-- ============================================================
+
+local function getRightAlignedX(font, text)
+    local screenWidth = getCore():getScreenWidth()
+    local textWidth = getTextManager():MeasureStringX(font, text)
+    return screenWidth - textWidth - HUD_MARGIN_X
+end
+
+-- ============================================================
 -- AFFICHAGE DU CHRONOMETRE
 -- ============================================================
 
 local function drawTimer()
     if EE_startTime == nil then return end
     if EE_gameOver then
-        getTextManager():DrawString(UIFont.NewMedium, 10, 10,
-            "TEMPS ECOULE - GAME OVER", 1, 0.2, 0.2, 1)
+        local gameOverText = "TEMPS ECOULE - GAME OVER"
+        getTextManager():DrawString(UIFont.NewMedium, getRightAlignedX(UIFont.NewMedium, gameOverText), HUD_MARGIN_Y,
+            gameOverText, 1, 0.2, 0.2, 1)
         return
     end
 
@@ -62,8 +76,7 @@ local function drawTimer()
         color = COLOR_RED
     end
 
-    -- Fond semi-transparent
-    getTextManager():DrawString(UIFont.NewMedium, 10, 10, text,
+    getTextManager():DrawString(UIFont.NewMedium, getRightAlignedX(UIFont.NewMedium, text), HUD_MARGIN_Y, text,
         color[1], color[2], color[3], color[4])
 end
 
@@ -86,7 +99,7 @@ local function drawRole()
     local name = roleNames[role] or role
     local text = "Role: " .. name
 
-    getTextManager():DrawString(UIFont.NewSmall, 10, 35, text,
+    getTextManager():DrawString(UIFont.NewSmall, getRightAlignedX(UIFont.NewSmall, text), HUD_MARGIN_Y + HUD_LINE_GAP, text,
         COLOR_WHITE[1], COLOR_WHITE[2], COLOR_WHITE[3], COLOR_WHITE[4])
 end
 
@@ -96,7 +109,7 @@ end
 
 local function drawMessages()
     local nowSeconds = getNowSeconds()
-    local y = 60
+    local y = HUD_MARGIN_Y + (HUD_LINE_GAP * 2) + 10
     for i = #UI.messages, 1, -1 do
         local msg = UI.messages[i]
         local age = nowSeconds - msg.time
@@ -107,7 +120,7 @@ local function drawMessages()
             if age > UI.messageDuration - 1 then
                 alpha = UI.messageDuration - age  -- fondu
             end
-            getTextManager():DrawString(UIFont.NewMedium, 10, y, msg.text,
+            getTextManager():DrawString(UIFont.NewMedium, getRightAlignedX(UIFont.NewMedium, msg.text), y, msg.text,
                 msg.color[1], msg.color[2], msg.color[3], alpha)
             y = y + 25
         end
@@ -155,6 +168,11 @@ local function onServerCommand(module, command, data)
         local pl = getPlayer()
         if pl and data.username == pl:getUsername() then
             UI.addMessage("Role: " .. data.roleName, COLOR_GREEN)
+        end
+    elseif command == "RoleDenied" then
+        local pl = getPlayer()
+        if pl and data.username == pl:getUsername() then
+            UI.addMessage(data.text or "Trop de joueurs pour ce scenario!", COLOR_RED)
         end
     end
 end

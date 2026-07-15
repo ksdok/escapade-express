@@ -19,21 +19,6 @@ local PARKING_X = 11250
 local PARKING_Y = 8550
 local PARKING_Z = 0
 
--- Entrees du mall pour spawn zombies (placeholder)
-local MALL_ENTRANCES = {
-    {x = 11200, y = 8400, z = 0},  -- entree nord
-    {x = 11100, y = 8500, z = 0},  -- entree sud
-    {x = 11300, y = 8450, z = 0},  -- entree est
-}
-
--- Boutiques pour incendie (placeholder)
-local SHOPS = {
-    {x = 11180, y = 8430, z = 0},
-    {x = 11220, y = 8470, z = 0},
-    {x = 11150, y = 8460, z = 0},
-    {x = 11200, y = 8420, z = 0},
-}
-
 -- Emplacement du bidon d'essence (placeholder, different du parking)
 local GAS_CAN_LOCATION = {x = 11170, y = 8490, z = 0}
 
@@ -42,19 +27,181 @@ local GAS_CAN_LOCATION = {x = 11170, y = 8490, z = 0}
 -- ============================================================
 
 local DURATION_HOURS = 3         -- duree totale
-local POWER_OUTAGE_TIME = 0.75   -- ~45 min
-local FIRE_TIME = 2.0            -- ~2h
-local FIRE_WARNING_TIME = 1.9    -- warning incendie ~1h54
+
+local ROLE_NAMES = {
+    soldat = "Soldat",
+    voleur = "Voleur",
+    local_ = "Local",
+    medic = "Medic",
+}
+
+local ROLE_DEFS = {
+    soldat = {
+        skills = {
+            {Perks.Aiming, 4},
+            {Perks.Reloading, 3},
+            {Perks.Fitness, 4},
+            {Perks.Strength, 4},
+            {Perks.Sneak, 2},
+        },
+        items = {
+            {"Base.Pistol", 1},
+            {"Base.PistolMagazine", 2},
+            {"Base.Bullets9mm", 30},
+            {"Base.Bandage", 3},
+            {"Base.Torch", 1},
+            {"Base.Battery", 2},
+            {"Base.HoodieDOWNBlackTINT", 1},
+            {"Base.Trousers", 1},
+        },
+    },
+    voleur = {
+        skills = {
+            {Perks.Sneak, 5},
+            {Perks.Lightfoot, 5},
+            {Perks.Nimble, 5},
+            {Perks.Electrical, 2},
+            {Perks.Fitness, 3},
+        },
+        items = {
+            {"Base.Crowbar", 1},
+            {"Base.Screwdriver", 1},
+            {"Base.Bandage", 2},
+            {"Base.Torch", 1},
+            {"Base.Battery", 1},
+            {"Base.HoodieDOWNWhiteTINT", 1},
+            {"Base.Trousers", 1},
+            {"Base.Shoes_Black", 1},
+        },
+    },
+    local_ = {
+        skills = {
+            {Perks.Cooking, 4},
+            {Perks.Carpentry, 4},
+            {Perks.PlantScavenging, 3},
+            {Perks.Fitness, 3},
+            {Perks.Strength, 3},
+        },
+        items = {
+            {"Base.Hammer", 1},
+            {"Base.Nails", 20},
+            {"Base.Saw", 1},
+            {"Base.WaterBottleFull", 2},
+            {"Base.CannedBeans", 2},
+            {"Base.TinOpener", 1},
+            {"Base.Bandage", 2},
+            {"Base.Bag_NormalHikingBag", 1},
+            {"Base.Map", 1},
+        },
+    },
+    medic = {
+        skills = {
+            {Perks.Doctor, 6},
+            {Perks.Fitness, 3},
+            {Perks.Strength, 3},
+            {Perks.Aiming, 2},
+        },
+        items = {
+            {"Base.Bandage", 5},
+            {"Base.DisinfectantAlcohol", 2},
+            {"Base.Painkillers", 2},
+            {"Base.Antibiotics", 1},
+            {"Base.Torch", 1},
+            {"Base.Battery", 2},
+            {"Base.Bag_DuffelBag", 1},
+            {"Base.Trousers", 1},
+            {"Base.Shoes_Black", 1},
+        },
+    },
+}
 
 -- State global (partage entre fichiers client)
 EE_startTime = nil
-EE_powerOutageDone = false
-EE_fireDone = false
-EE_fireWarningDone = false
 EE_gameOver = false
-EE_escapeVehicleSpawned = false
 
+local timeWarningsShown = {}
 local runtimeHooksRegistered = false
+
+local function isSinglePlayerRuntime()
+    if isClient ~= nil then
+        return not isClient()
+    end
+
+    if getOnlinePlayers ~= nil then
+        local onlinePlayers = getOnlinePlayers()
+        return onlinePlayers == nil or onlinePlayers:size() == 0
+    end
+
+    return true
+end
+
+local function applyRoleLocally(player, roleKey)
+    if player == nil or roleKey == nil then return false end
+
+    local def = ROLE_DEFS[roleKey]
+    if def == nil then return false end
+
+    local modData = player:getModData()
+    if modData.EE_localRoleApplied == roleKey then
+        modData.EE_role = roleKey
+        modData.EE_reviveEnabled = true
+        return false
+    end
+
+    local inv = player:getInventory()
+    for _, itemDef in ipairs(def.items) do
+        local itemId, count = itemDef[1], itemDef[2]
+        if count > 1 then
+            inv:AddItems(itemId, count)
+        else
+            inv:AddItem(itemId)
+        end
+    end
+
+    for _, skillDef in ipairs(def.skills) do
+        local perk, level = skillDef[1], skillDef[2]
+        player:getXp():setXPToLevel(perk, level)
+    end
+
+    player:getStats():setPanic(30)
+    player:getStats():setHunger(0.2)
+    player:getStats():setThirst(0.2)
+    player:getStats():setFatigue(0)
+
+    modData.EE_role = roleKey
+    modData.EE_reviveEnabled = true
+    modData.EE_localRoleApplied = roleKey
+
+    return true
+end
+
+local function syncWarningStateFromTimer()
+    timeWarningsShown = {}
+
+    if EE_startTime == nil then return end
+
+    local elapsed = getGameTime():getWorldAgeHours() - EE_startTime
+    local remainingMin = math.floor((DURATION_HOURS - elapsed) * 60)
+
+    if remainingMin < 120 then timeWarningsShown[120] = true end
+    if remainingMin < 60 then timeWarningsShown[60] = true end
+    if remainingMin < 30 then timeWarningsShown[30] = true end
+    if remainingMin < 10 then timeWarningsShown[10] = true end
+end
+
+local function enforceRealTimeDayLength()
+    if SandboxVars ~= nil then
+        SandboxVars.DayLength = 26
+    end
+
+    if getGameTime ~= nil then
+        local gameTime = getGameTime()
+        if gameTime ~= nil and gameTime.setMinutesPerDay ~= nil then
+            gameTime:setMinutesPerDay(60 * 24)
+        end
+    end
+end
+
 local gameStartEventRegistered = false
 local scenarioInitialized = false
 
@@ -74,13 +221,13 @@ local function registerRuntimeHooks()
     if runtimeHooksRegistered then return end
 
     runtimeHooksRegistered = true
-    Events.EveryMinutes.Add(EscapadeExpress.EveryMinutes)
-    Events.EveryHours.Add(EscapadeExpress.EveryHours)
+    Events.EveryOneMinute.Add(EscapadeExpress.EveryMinutes)
     Events.OnPlayerDeath.Add(EscapadeExpress.OnPlayerDeath)
     Events.OnCreatePlayer.Add(EscapadeExpress.OnCreatePlayer)
 end
 
 EscapadeExpress.OnGameStart = function()
+    enforceRealTimeDayLength()
     registerRuntimeHooks()
     EscapadeExpress.OnNewGame()
 end
@@ -99,32 +246,49 @@ end
 -- ============================================================
 
 EscapadeExpress.OnNewGame = function()
-    if scenarioInitialized then return end
-
     local pl = getPlayer()
     if pl == nil then return end
     if pl:getHoursSurvived() > 1 then return end
 
-    scenarioInitialized = true
+    if not scenarioInitialized then
+        scenarioInitialized = true
 
-    -- Initialiser le timer
-    EE_startTime = getGameTime():getWorldAgeHours()
-    EE_powerOutageDone = false
-    EE_fireDone = false
-    EE_fireWarningDone = false
-    EE_gameOver = false
+        -- Le timer est synchronise par le serveur
+        EE_startTime = nil
+        EE_gameOver = false
+        timeWarningsShown = {}
 
-    -- Marquer le joueur pour le revive
-    pl:getModData().EE_reviveEnabled = true
-    pl:getModData().EE_role = nil  -- sera assigne par le serveur
+        -- Initialisation locale une seule fois
+        pl:getModData().EE_reviveEnabled = true
+        pl:getModData().EE_role = nil  -- sera assigne par le serveur
 
-    -- Demander au serveur d'assigner un role et de donner items
-    sendClientCommand("EscapadeExpress", "PlayerReady", {
-        username = pl:getUsername()
-    })
+        -- Message d'intro
+        pl:Say("On est pieges dans le mall! Trouvez un vehicule et un bidon d'essence!")
+    else
+        -- Rejoin / create-player tardif: garder le revive actif
+        pl:getModData().EE_reviveEnabled = true
+    end
 
-    -- Message d'intro
-    pl:Say("On est pieges dans le mall! Trouvez un vehicule et un bidon d'essence!")
+    -- Solo: fallback local car la voie client->serveur n'est pas fiable ici.
+    if isSinglePlayerRuntime() then
+        if pl:getModData().EE_role == nil then
+            applyRoleLocally(pl, "soldat")
+        end
+
+        if EE_startTime == nil then
+            EE_startTime = getGameTime():getWorldAgeHours()
+            syncWarningStateFromTimer()
+        end
+
+        return
+    end
+
+    -- Multiplayer: re-tenter tant que le role n'est pas encore confirme
+    if pl:getModData().EE_role == nil then
+        sendClientCommand("EscapadeExpress", "PlayerReady", {
+            username = pl:getUsername()
+        })
+    end
 end
 
 EscapadeExpress.OnCreatePlayer = function()
@@ -135,7 +299,11 @@ end
 -- 4. STUBS REQUIS (pattern Pillow's)
 -- ============================================================
 
-EscapadeExpress.setSandBoxVars = function() end
+EscapadeExpress.setSandBoxVars = function()
+    if SandboxVars ~= nil then
+        SandboxVars.DayLength = 26
+    end
+end
 EscapadeExpress.RemovePlayer = function(p) end
 EscapadeExpress.AddPlayer = function(p) end
 EscapadeExpress.Render = function() end
@@ -181,91 +349,29 @@ EscapadeExpress.EveryMinutes = function()
     local elapsed = getGameTime():getWorldAgeHours() - EE_startTime
     local remaining = DURATION_HOURS - elapsed
 
-    -- === COUPURE ELECTRIQUE (~45 min) ===
-    if not EE_powerOutageDone and elapsed >= POWER_OUTAGE_TIME then
-        EE_powerOutageDone = true
-        pl:Say("Coupure de courant! Les lumieres sont eteintes.")
-        -- Le serveur gere l'autorite de l'electricite
-        sendClientCommand("EscapadeExpress", "PowerOutage", {})
-        -- Jouer un son
-        if pl then pl:playSound("LightbulbBurnedOut") end
+    if remaining <= 0 then
+        return
     end
 
-    -- === WARNING INCENDIE (~1h54) ===
-    if not EE_fireWarningDone and elapsed >= FIRE_WARNING_TIME then
-        EE_fireWarningDone = true
-        pl:Say("Je sens de la fumee... Un incendie pourrait demarrer!")
-    end
+    local remainingMin = math.floor(remaining * 60)
 
-    -- === INCENDIE (~2h) ===
-    if not EE_fireDone and elapsed >= FIRE_TIME then
-        EE_fireDone = true
-        -- Choisir une boutique au hasard
-        local shop = SHOPS[ZombRand(#SHOPS) + 1]
-        pl:Say("Un incendie! Le feu se propage!")
-        pl:playSound("SmallExplosion")
-        -- Le serveur demarre le feu (autorite)
-        sendClientCommand("EscapadeExpress", "StartFire", {
-            x = shop.x, y = shop.y, z = shop.z
-        })
-    end
-
-    -- === FIN DU TIMER (3h) ===
-    if remaining <= 0 and not EE_gameOver then
-        EE_gameOver = true
-        pl:Say("TEMPS ECOULE! Les zombies envahissent le mall!")
-        -- Horde massive: le serveur spawn beaucoup de zombies
-        sendClientCommand("EscapadeExpress", "GameOver", {})
-    end
-
-    -- === WARNINGS TEMPS ===
-    if remaining > 0 then
-        local remainingMin = math.floor(remaining * 60)
-        if remainingMin == 120 then
-            pl:Say("Plus que 2 heures!")
-        elseif remainingMin == 60 then
-            pl:Say("Plus que 1 heure!")
-        elseif remainingMin == 30 then
-            pl:Say("Plus que 30 minutes! Depechez-vous!")
-        elseif remainingMin == 10 then
-            pl:Say("Plus que 10 minutes!")
-        end
+    if remainingMin <= 120 and not timeWarningsShown[120] then
+        timeWarningsShown[120] = true
+        pl:Say("Plus que 2 heures!")
+    elseif remainingMin <= 60 and not timeWarningsShown[60] then
+        timeWarningsShown[60] = true
+        pl:Say("Plus que 1 heure!")
+    elseif remainingMin <= 30 and not timeWarningsShown[30] then
+        timeWarningsShown[30] = true
+        pl:Say("Plus que 30 minutes! Depechez-vous!")
+    elseif remainingMin <= 10 and not timeWarningsShown[10] then
+        timeWarningsShown[10] = true
+        pl:Say("Plus que 10 minutes!")
     end
 end
 
 -- ============================================================
--- 9. AUGMENTATION PROGRESSIVE DES ZOMBIES (chaque heure)
--- ============================================================
-
-EscapadeExpress.EveryHours = function()
-    if EE_startTime == nil or EE_gameOver then return end
-
-    local pl = getPlayer()
-    if pl == nil then return end
-
-    local elapsed = getGameTime():getWorldAgeHours() - EE_startTime
-
-    -- Densite selon le temps ecoule
-    local count
-    if elapsed < 1 then
-        count = 3    -- heure 0-1: tres faible
-    elseif elapsed < 2 then
-        count = 10   -- heure 1-2: moyen
-    else
-        count = 25   -- heure 2-3: intense
-    end
-
-    -- Le serveur spawn les zombies (autorite en MP)
-    for _, entrance in ipairs(MALL_ENTRANCES) do
-        sendClientCommand("EscapadeExpress", "SpawnZombies", {
-            x = entrance.x, y = entrance.y, z = entrance.z,
-            count = count
-        })
-    end
-end
-
--- ============================================================
--- 10. MORT DU JOUEUR (prevention cote client)
+-- 9. MORT DU JOUEUR (prevention cote client)
 -- ============================================================
 
 EscapadeExpress.OnPlayerDeath = function(player)
@@ -298,21 +404,25 @@ EscapadeExpress.OnPlayerDeath = function(player)
 end
 
 -- ============================================================
--- 11. RECEPTION COMMANDES SERVEUR
+-- 10. RECEPTION COMMANDES SERVEUR
 -- ============================================================
 
 local function onServerCommand(module, command, data)
     if module ~= "EscapadeExpress" then return end
 
     if command == "RoleAssigned" then
-        -- Le serveur a assigne un role et donne les items
         local pl = getPlayer()
         if pl and data.username == pl:getUsername() then
             pl:getModData().EE_role = data.role
-            pl:Say("Mon role: " .. data.roleName)
+            pl:getModData().EE_localRoleApplied = data.role
+        end
+    elseif command == "RoleDenied" then
+        local pl = getPlayer()
+        if pl and data.username == pl:getUsername() then
+            pl:getModData().EE_role = nil
+            pl:getModData().EE_reviveEnabled = false
         end
     elseif command == "PlayerDown" then
-        -- Un autre joueur est a terre
         local pl = getPlayer()
         if pl then
             pl:Say(data.username .. " est a terre! Allez le ranimer!")
@@ -347,11 +457,16 @@ local function onServerCommand(module, command, data)
         elseif pl then
             pl:Say(data.username .. " a ete renvoye au point de depart.")
         end
+    elseif command == "SyncTimer" then
+        EE_startTime = data and data.startTime or nil
+        syncWarningStateFromTimer()
     elseif command == "GameOver" then
         EE_gameOver = true
     elseif command == "Message" then
         local pl = getPlayer()
-        if pl then pl:Say(data.text) end
+        if pl and data and data.text then
+            pl:Say(data.text)
+        end
     end
 end
 Events.OnServerCommand.Add(onServerCommand)

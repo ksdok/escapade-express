@@ -88,7 +88,7 @@
 - [x] Corriger le spawn du bidon avec l'API monde correcte
 - [x] Verifier si `getTimestampMs()` est valide, sinon remplacer
 - [x] Revoir la logique de revive pour coller a la spec (medic 30 sec / autre 1 min / sinon respawn)
-- [ ] Verifier la synchro multi des events (coupure elec, incendie, zombies, game over)
+- [x] Verifier la synchro multi des events (coupure elec, incendie, zombies, game over)
 - [ ] Garder les coordonnees en placeholders tant que le debug en jeu n'est pas fait
 
 ### Phase 4: Test du scenario -- A FAIRE
@@ -111,7 +111,7 @@
 - [x] EE-04 (S) - Verifier/remplacer `getTimestampMs()` dans l'UI
 - [x] EE-05 (M) - Revoir la logique de revive pour respecter la spec (medic 30 sec / autre 1 min / sinon respawn) et le multijoueur
 - [ ] EE-06 (M) - Fiabiliser l'assignation des 4 roles et des items/skills au lancement du scenario
-- [ ] EE-07 (M) - Fiabiliser la synchro multi des evenements scripts cote serveur
+- [x] EE-07 (M) - Fiabiliser la synchro multi des evenements scripts cote serveur
 - [ ] EE-08 (S) - Nettoyer les messages dupliques client/UI
 - [ ] EE-09 (S) - Definir et documenter les placeholders de coords du mall dans le code
 - [ ] EE-10 (M) - Ajouter un plan de test minimal solo + LAN pour le scenario complet
@@ -160,3 +160,6 @@
 - 2026-07-15: Clarification: le but est d'ajouter un scenario a Pillow's Random Scenarios, pas de creer un nouveau mode
 - 2026-07-15: Backlog redecoupe en tickets small a medium pour corriger et fiabiliser ce scenario
 - 2026-07-15: EE-05 implemente cote client/serveur et spec revive reduite a 30 sec (medic) / 1 min (autres)
+- 2026-07-15: Clean-up post-review applique sur EE-05 (doc revive alignee + setDoDeathSound cote serveur)
+- 2026-07-15: EE-07 implemente: timer et evenements scripts passes sous autorite serveur avec SyncTimer pour les late joiners
+- 2026-07-15: EE-07 corrige post-review: warnings late joiner alignes sur le vrai temps restant et AlertMessage dedoublonne avec l'UI
