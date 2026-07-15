@@ -288,63 +288,55 @@ end
 Source: JavaDoc IsoGameCharacter B41 + event OnPlayerDeath
 
 ```lua
--- Intercepter la mort
+-- Timings du scenario (temps de jeu)
+local REVIVE_TIME_MEDIC = 30 / 3600  -- 30 sec
+local REVIVE_TIME_OTHER = 1 / 60     -- 1 min
+
+-- Intercepter la mort cote client puis prevenir le serveur
 local function onPlayerDeath(player)
     local modData = player:getModData()
     if modData.EE_reviveEnabled then
-        -- Empecher la mort: set health > 0
-        player:setHealth(0.01)  -- quasi-mort mais vivant
-        player:setKnockedDown(true)  -- a terre
+        player:setHealth(0.01)
+        player:setKnockedDown(true)
         player:setDoDeathSound(false)
 
-        -- Stocker le timestamp de "mort"
-        modData.EE_downTime = getTimestamp()
-
-        -- Jouer un son
-        player:playSound("PlayerDied")
-
-        -- Annoncer aux autres joueurs
-        getSpecificPlayer(0):Say("Un joueur est a terre!")
-
-        -- Stocker la position pour le revive
+        modData.EE_downed = true
+        modData.EE_downTime = getGameTime():getWorldAgeHours()
         modData.EE_downX = player:getX()
         modData.EE_downY = player:getY()
         modData.EE_downZ = player:getZ()
+
+        sendClientCommand("EscapadeExpress", "PlayerDown", {
+            x = modData.EE_downX,
+            y = modData.EE_downY,
+            z = modData.EE_downZ,
+        })
     end
 end
 Events.OnPlayerDeath.Add(onPlayerDeath)
 
--- Ranimer un joueur
-local function revivePlayer(targetPlayer, reviverPlayer)
-    targetPlayer:setHealth(0.5)       -- revive a 50% HP
-    targetPlayer:setKnockedDown(false)
-    targetPlayer:getModData().EE_downTime = nil
-    targetPlayer:Say("Je suis vivant!")
-end
-
--- Verifier le delai de revive (dans OnTick ou EveryTenMinutes)
-local function checkReviveTimeout()
-    local players = getOnlinePlayers()
-    for i=0, players:size()-1 do
+-- Verification cote serveur (autorite)
+local function checkDownedPlayers(players)
+    for i = 0, players:size() - 1 do
         local p = players:get(i)
         local modData = p:getModData()
-        if modData.EE_downTime then
-            local elapsed = getTimestamp() - modData.EE_downTime
-            -- Exemple simplifie: 1 min = 60 secondes (temps jeu)
-            if elapsed > 60 then
-                -- Respawn au point de depart avec blessures
-                p:setHealth(0.3)
-                p:setKnockedDown(false)
-                p:setX(spawnX)
-                p:setY(spawnY)
-                p:setZ(0)
-                modData.EE_downTime = nil
-                p:Say("Je me suis reveille...")
+        if modData.EE_downed and modData.EE_downTime then
+            local elapsed = getGameTime():getWorldAgeHours() - modData.EE_downTime
+            local reviverType = getNearbyReviverType(p)
+
+            if reviverType == "medic" and elapsed >= REVIVE_TIME_MEDIC then
+                revivePlayer(p, reviverType)
+            elseif elapsed >= REVIVE_TIME_OTHER then
+                if reviverType == "other" or reviverType == "medic" then
+                    revivePlayer(p, reviverType)
+                else
+                    respawnPlayerAtStart(p)
+                end
             end
         end
     end
 end
-Events.EveryTenMinutes.Add(checkReviveTimeout)
+Events.EveryMinutes.Add(checkDownedPlayers)
 
 -- IMPORTANT: le revive en multi est delicat.
 -- - OnPlayerDeath est un event CLIENT (se declenche sur la machine du joueur qui meurt)

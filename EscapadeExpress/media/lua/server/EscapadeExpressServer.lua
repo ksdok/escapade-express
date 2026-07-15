@@ -365,6 +365,7 @@ local function markPlayerDowned(player, x, y, z)
     modData.EE_downZ = z ~= nil and z or player:getZ()
 
     player:setKnockedDown(true)
+    player:setDoDeathSound(false)
     player:setHealth(0.01)
 
     print("[EE] " .. player:getUsername() .. " est a terre!")
