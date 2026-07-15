@@ -273,18 +273,24 @@ EscapadeExpress.OnPlayerDeath = function(player)
 
     local modData = player:getModData()
     if modData.EE_reviveEnabled and not EE_gameOver then
+        if modData.EE_downed then return end
+
         -- Empecher la mort: le serveur gerera le revive
         player:setHealth(0.01)
         player:setKnockedDown(true)
         player:setDoDeathSound(false)
         modData.EE_downed = true
+        modData.EE_downTime = getGameTime():getWorldAgeHours()
+        modData.EE_downX = player:getX()
+        modData.EE_downY = player:getY()
+        modData.EE_downZ = player:getZ()
 
         -- Informer le serveur
         sendClientCommand("EscapadeExpress", "PlayerDown", {
             username = player:getUsername(),
-            x = player:getX(),
-            y = player:getY(),
-            z = player:getZ()
+            x = modData.EE_downX,
+            y = modData.EE_downY,
+            z = modData.EE_downZ
         })
 
         player:Say("Je suis a terre! Quelqu'un peut me ranimer!")
@@ -314,7 +320,12 @@ local function onServerCommand(module, command, data)
     elseif command == "PlayerRevived" then
         local pl = getPlayer()
         if pl and data.username == pl:getUsername() then
-            pl:getModData().EE_downed = false
+            local modData = pl:getModData()
+            modData.EE_downed = false
+            modData.EE_downTime = nil
+            modData.EE_downX = nil
+            modData.EE_downY = nil
+            modData.EE_downZ = nil
             if data.reviverType == "medic" then
                 pl:Say("Le medic m'a ranime!")
             else
@@ -326,7 +337,12 @@ local function onServerCommand(module, command, data)
     elseif command == "PlayerRespawned" then
         local pl = getPlayer()
         if pl and data.username == pl:getUsername() then
-            pl:getModData().EE_downed = false
+            local modData = pl:getModData()
+            modData.EE_downed = false
+            modData.EE_downTime = nil
+            modData.EE_downX = nil
+            modData.EE_downY = nil
+            modData.EE_downZ = nil
             pl:Say("Je me reveille au point de depart...")
         elseif pl then
             pl:Say(data.username .. " a ete renvoye au point de depart.")

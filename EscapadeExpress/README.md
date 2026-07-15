@@ -30,7 +30,7 @@ Scenario coop 4 joueurs: echappez du Xonic's Mega Mall en 3h!
 - **Incendie** a ~2h dans une boutique aleatoire (se propage)
 - **Vehicule** dans le parking (essence vide, bidon a trouver)
 - **Zombies**: densite faible au debut, augmente chaque heure
-- **Revive**: medic 5 min, autre joueur 10 min, sinon respawn
+- **Revive**: medic 30 sec, autre joueur 1 min, sinon respawn
 
 ## Coordonnees (PLACEHOLDERS)
 

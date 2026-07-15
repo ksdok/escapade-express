@@ -323,21 +323,63 @@ end
 -- REVIVE - MONITORING DES JOUEURS A TERRE
 -- ============================================================
 
-local REVIVE_TIME_MEDIC = 0.0833   -- 5 min (en heures de jeu)
-local REVIVE_TIME_OTHER = 0.1667   -- 10 min (en heures de jeu)
-local REVIVE_HEALTH = 0.5          -- HP au revive
+local REVIVE_TIME_MEDIC = 30 / 3600  -- 30 sec (en heures de jeu)
+local REVIVE_TIME_OTHER = 1 / 60      -- 1 min (en heures de jeu)
+local REVIVE_HEALTH = 0.5            -- HP au revive
 local RESPAWN_HEALTH = 0.3
-local REVIVE_RADIUS = 10           -- tiles
+local REVIVE_RADIUS = 10             -- tiles
+
+local function getScenarioPlayers()
+    local result = {}
+
+    if getOnlinePlayers ~= nil then
+        local onlinePlayers = getOnlinePlayers()
+        if onlinePlayers ~= nil and onlinePlayers:size() > 0 then
+            for i = 0, onlinePlayers:size() - 1 do
+                result[#result + 1] = onlinePlayers:get(i)
+            end
+            return result
+        end
+    end
+
+    if getPlayer ~= nil then
+        local singlePlayer = getPlayer()
+        if singlePlayer ~= nil then
+            result[#result + 1] = singlePlayer
+        end
+    end
+
+    return result
+end
+
+local function markPlayerDowned(player, x, y, z)
+    local modData = player:getModData()
+    if modData.EE_downed then
+        return false
+    end
+
+    modData.EE_downed = true
+    modData.EE_downTime = getGameTime():getWorldAgeHours()
+    modData.EE_downX = x ~= nil and x or player:getX()
+    modData.EE_downY = y ~= nil and y or player:getY()
+    modData.EE_downZ = z ~= nil and z or player:getZ()
+
+    player:setKnockedDown(true)
+    player:setHealth(0.01)
+
+    print("[EE] " .. player:getUsername() .. " est a terre!")
+    sendServerCommand("EscapadeExpress", "PlayerDown", {
+        username = player:getUsername()
+    })
+
+    return true
+end
 
 local function getNearbyReviverType(downedPlayer, radius)
     radius = radius or REVIVE_RADIUS
-    local players = getOnlinePlayers()
-    if players == nil then return nil end
-
     local hasOtherNearby = false
 
-    for i = 0, players:size() - 1 do
-        local p = players:get(i)
+    for _, p in ipairs(getScenarioPlayers()) do
         if p:getUsername() ~= downedPlayer:getUsername() then
             local otherData = p:getModData()
             if not otherData.EE_downed then
@@ -365,6 +407,9 @@ local function clearDownedState(player)
     local modData = player:getModData()
     modData.EE_downed = false
     modData.EE_downTime = nil
+    modData.EE_downX = nil
+    modData.EE_downY = nil
+    modData.EE_downZ = nil
 end
 
 local function revivePlayer(player, reviverType)
@@ -394,25 +439,12 @@ local function respawnPlayerAtStart(player)
 end
 
 local function checkDownedPlayers()
-    local players = getOnlinePlayers()
-    if players == nil then return end
-
-    for i = 0, players:size() - 1 do
-        local p = players:get(i)
+    for _, p in ipairs(getScenarioPlayers()) do
         local modData = p:getModData()
 
-        -- Detecter un joueur qui tombe a terre (sante critique)
+        -- Backup serveur si le client ne remonte pas l'etat a temps
         if not modData.EE_downed and p:getHealth() < 0.15 and modData.EE_reviveEnabled then
-            -- Prevenir la mort
-            p:setKnockedDown(true)
-            p:setHealth(0.01)
-            modData.EE_downed = true
-            modData.EE_downTime = getGameTime():getWorldAgeHours()
-
-            print("[EE] " .. p:getUsername() .. " est a terre!")
-            sendServerCommand("EscapadeExpress", "PlayerDown", {
-                username = p:getUsername()
-            })
+            markPlayerDowned(p)
         end
 
         -- Verifier les joueurs a terre pour le revive / respawn
@@ -484,17 +516,11 @@ local function onClientCommand(module, command, player, data)
         })
 
     elseif command == "PlayerDown" then
-        -- Le client signale un joueur a terre
-        -- Le monitoring serveur (checkDownedPlayers) s'en occupe aussi
-        -- mais on enregistre ici aussi pour redundancy
-        local modData = player:getModData()
-        if not modData.EE_downed then
-            modData.EE_downed = true
-            modData.EE_downTime = getGameTime():getWorldAgeHours()
-        end
-        sendServerCommand("EscapadeExpress", "PlayerDown", {
-            username = player:getUsername()
-        })
+        -- Le client signale un joueur a terre; le serveur devient la source d'autorite
+        local downX = data and data.x or nil
+        local downY = data and data.y or nil
+        local downZ = data and data.z or nil
+        markPlayerDowned(player, downX, downY, downZ)
 
     elseif command == "PowerOutage" then
         cutPower()

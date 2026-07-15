@@ -6,7 +6,7 @@
 - Duree: 3h avec chronometre visible
 - Objectif: sortir du mall, trouver un vehicule dans le parking, s'enfuir
 - Evenements: coupure electricite (~45min), incendie (~2h)
-- Mort: joueur ranimable par le medic (5 min) ou autre joueur (10 min)
+- Mort: joueur ranimable par le medic (30 sec) ou autre joueur (1 min)
 
 ---
 
@@ -330,8 +330,8 @@ local function checkReviveTimeout()
         local modData = p:getModData()
         if modData.EE_downTime then
             local elapsed = getTimestamp() - modData.EE_downTime
-            -- 5 min = 300 secondes (temps jeu)
-            if elapsed > 300 then
+            -- Exemple simplifie: 1 min = 60 secondes (temps jeu)
+            if elapsed > 60 then
                 -- Respawn au point de depart avec blessures
                 p:setHealth(0.3)
                 p:setKnockedDown(false)

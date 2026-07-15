@@ -43,7 +43,7 @@
 - Vehicule sans essence -- faut trouver un bidon
 - Chronometre 3h (visible)
 - Densite zombies: faible au debut, augmente avec le temps
-- Mort: joueur ranimable (medic 5 min, autre joueur 10 min, sinon respawn depart)
+- Mort: joueur ranimable (medic 30 sec, autre joueur 1 min, sinon respawn depart)
 
 ### Evenements scriptes (VALIDES)
 1. Coupure electrique (~45 min) -- lumieres coupees, torches obligatoires
@@ -83,11 +83,11 @@
 - [x] Identifier les ecarts critiques et les bugs probables
 
 ### Phase 3: Correctifs du scenario -- EN COURS
-- [ ] Corriger l'ordre d'initialisation du scenario (`OnGameStart`, `OnNewGame`, hooks)
-- [ ] Corriger les commandes reseau client/serveur
-- [ ] Corriger le spawn du bidon avec l'API monde correcte
-- [ ] Verifier si `getTimestampMs()` est valide, sinon remplacer
-- [ ] Revoir la logique de revive pour coller a la spec (medic 5 min / autre 10 min / sinon respawn)
+- [x] Corriger l'ordre d'initialisation du scenario (`OnGameStart`, `OnNewGame`, hooks)
+- [x] Corriger les commandes reseau client/serveur
+- [x] Corriger le spawn du bidon avec l'API monde correcte
+- [x] Verifier si `getTimestampMs()` est valide, sinon remplacer
+- [x] Revoir la logique de revive pour coller a la spec (medic 30 sec / autre 1 min / sinon respawn)
 - [ ] Verifier la synchro multi des events (coupure elec, incendie, zombies, game over)
 - [ ] Garder les coordonnees en placeholders tant que le debug en jeu n'est pas fait
 
@@ -105,16 +105,18 @@
 - [ ] (Optionnel) Publier sur Steam Workshop
 
 ### Tickets proposes (taille small a medium)
-- [ ] EE-01 (S) - Corriger l'initialisation du scenario Pillow's (`OnGameStart`, `OnNewGame`, registration)
-- [ ] EE-02 (S) - Corriger tous les appels `sendClientCommand` / `sendServerCommand`
-- [ ] EE-03 (S) - Corriger le spawn du bidon avec `SpawnWorldInventoryItem` ou equivalent valide
-- [ ] EE-04 (S) - Verifier/remplacer `getTimestampMs()` dans l'UI
-- [ ] EE-05 (M) - Revoir la logique de revive pour respecter la spec et le multijoueur
+- [x] EE-01 (S) - Corriger l'initialisation du scenario Pillow's (`OnGameStart`, `OnNewGame`, registration)
+- [x] EE-02 (S) - Corriger tous les appels `sendClientCommand` / `sendServerCommand`
+- [x] EE-03 (S) - Corriger le spawn du bidon avec `SpawnWorldInventoryItem` ou equivalent valide
+- [x] EE-04 (S) - Verifier/remplacer `getTimestampMs()` dans l'UI
+- [x] EE-05 (M) - Revoir la logique de revive pour respecter la spec (medic 30 sec / autre 1 min / sinon respawn) et le multijoueur
 - [ ] EE-06 (M) - Fiabiliser l'assignation des 4 roles et des items/skills au lancement du scenario
 - [ ] EE-07 (M) - Fiabiliser la synchro multi des evenements scripts cote serveur
 - [ ] EE-08 (S) - Nettoyer les messages dupliques client/UI
 - [ ] EE-09 (S) - Definir et documenter les placeholders de coords du mall dans le code
 - [ ] EE-10 (M) - Ajouter un plan de test minimal solo + LAN pour le scenario complet
+- [ ] EE-11 (S) - Definir collaborativement les objets de chaque role (items, quantites, vetements, equipement) -- validation utilisateur requise avant implementation
+- [ ] EE-12 (M) - Ajouter de nouveaux roles: Rambo, Sniper, Samourai (skills, items, mecaniques specifiques) -- adapter le systeme d'assignation pour >4 roles
 
 ---
 
@@ -157,3 +159,4 @@
 - 2026-07-15: Revue du prototype initial terminee
 - 2026-07-15: Clarification: le but est d'ajouter un scenario a Pillow's Random Scenarios, pas de creer un nouveau mode
 - 2026-07-15: Backlog redecoupe en tickets small a medium pour corriger et fiabiliser ce scenario
+- 2026-07-15: EE-05 implemente cote client/serveur et spec revive reduite a 30 sec (medic) / 1 min (autres)
