@@ -28,12 +28,152 @@ local GAS_CAN_LOCATION = {x = 11170, y = 8490, z = 0}
 
 local DURATION_HOURS = 3         -- duree totale
 
+local ROLE_NAMES = {
+    soldat = "Soldat",
+    voleur = "Voleur",
+    local_ = "Local",
+    medic = "Medic",
+}
+
+local ROLE_DEFS = {
+    soldat = {
+        skills = {
+            {Perks.Aiming, 4},
+            {Perks.Reloading, 3},
+            {Perks.Fitness, 4},
+            {Perks.Strength, 4},
+            {Perks.Sneak, 2},
+        },
+        items = {
+            {"Base.Pistol", 1},
+            {"Base.PistolMagazine", 2},
+            {"Base.Bullets9mm", 30},
+            {"Base.Bandage", 3},
+            {"Base.Torch", 1},
+            {"Base.Battery", 2},
+            {"Base.HoodieDOWNBlackTINT", 1},
+            {"Base.Trousers", 1},
+        },
+    },
+    voleur = {
+        skills = {
+            {Perks.Sneak, 5},
+            {Perks.Lightfoot, 5},
+            {Perks.Nimble, 5},
+            {Perks.Electrical, 2},
+            {Perks.Fitness, 3},
+        },
+        items = {
+            {"Base.Crowbar", 1},
+            {"Base.Screwdriver", 1},
+            {"Base.Bandage", 2},
+            {"Base.Torch", 1},
+            {"Base.Battery", 1},
+            {"Base.HoodieDOWNWhiteTINT", 1},
+            {"Base.Trousers", 1},
+            {"Base.Shoes_Black", 1},
+        },
+    },
+    local_ = {
+        skills = {
+            {Perks.Cooking, 4},
+            {Perks.Carpentry, 4},
+            {Perks.PlantScavenging, 3},
+            {Perks.Fitness, 3},
+            {Perks.Strength, 3},
+        },
+        items = {
+            {"Base.Hammer", 1},
+            {"Base.Nails", 20},
+            {"Base.Saw", 1},
+            {"Base.WaterBottleFull", 2},
+            {"Base.CannedBeans", 2},
+            {"Base.TinOpener", 1},
+            {"Base.Bandage", 2},
+            {"Base.Bag_NormalHikingBag", 1},
+            {"Base.Map", 1},
+        },
+    },
+    medic = {
+        skills = {
+            {Perks.Doctor, 6},
+            {Perks.Fitness, 3},
+            {Perks.Strength, 3},
+            {Perks.Aiming, 2},
+        },
+        items = {
+            {"Base.Bandage", 5},
+            {"Base.DisinfectantAlcohol", 2},
+            {"Base.Painkillers", 2},
+            {"Base.Antibiotics", 1},
+            {"Base.Torch", 1},
+            {"Base.Battery", 2},
+            {"Base.Bag_DuffelBag", 1},
+            {"Base.Trousers", 1},
+            {"Base.Shoes_Black", 1},
+        },
+    },
+}
+
 -- State global (partage entre fichiers client)
 EE_startTime = nil
 EE_gameOver = false
 
 local timeWarningsShown = {}
 local runtimeHooksRegistered = false
+
+local function isSinglePlayerRuntime()
+    if isClient ~= nil then
+        return not isClient()
+    end
+
+    if getOnlinePlayers ~= nil then
+        local onlinePlayers = getOnlinePlayers()
+        return onlinePlayers == nil or onlinePlayers:size() == 0
+    end
+
+    return true
+end
+
+local function applyRoleLocally(player, roleKey)
+    if player == nil or roleKey == nil then return false end
+
+    local def = ROLE_DEFS[roleKey]
+    if def == nil then return false end
+
+    local modData = player:getModData()
+    if modData.EE_localRoleApplied == roleKey then
+        modData.EE_role = roleKey
+        modData.EE_reviveEnabled = true
+        return false
+    end
+
+    local inv = player:getInventory()
+    for _, itemDef in ipairs(def.items) do
+        local itemId, count = itemDef[1], itemDef[2]
+        if count > 1 then
+            inv:AddItems(itemId, count)
+        else
+            inv:AddItem(itemId)
+        end
+    end
+
+    for _, skillDef in ipairs(def.skills) do
+        local perk, level = skillDef[1], skillDef[2]
+        player:getXp():setXPToLevel(perk, level)
+    end
+
+    player:getStats():setPanic(30)
+    player:getStats():setHunger(0.2)
+    player:getStats():setThirst(0.2)
+    player:getStats():setFatigue(0)
+
+    modData.EE_role = roleKey
+    modData.EE_reviveEnabled = true
+    modData.EE_localRoleApplied = roleKey
+
+    return true
+end
 
 local function syncWarningStateFromTimer()
     timeWarningsShown = {}
@@ -48,6 +188,20 @@ local function syncWarningStateFromTimer()
     if remainingMin < 30 then timeWarningsShown[30] = true end
     if remainingMin < 10 then timeWarningsShown[10] = true end
 end
+
+local function enforceRealTimeDayLength()
+    if SandboxVars ~= nil then
+        SandboxVars.DayLength = 26
+    end
+
+    if getGameTime ~= nil then
+        local gameTime = getGameTime()
+        if gameTime ~= nil and gameTime.setMinutesPerDay ~= nil then
+            gameTime:setMinutesPerDay(60 * 24)
+        end
+    end
+end
+
 local gameStartEventRegistered = false
 local scenarioInitialized = false
 
@@ -67,12 +221,13 @@ local function registerRuntimeHooks()
     if runtimeHooksRegistered then return end
 
     runtimeHooksRegistered = true
-    Events.EveryMinutes.Add(EscapadeExpress.EveryMinutes)
+    Events.EveryOneMinute.Add(EscapadeExpress.EveryMinutes)
     Events.OnPlayerDeath.Add(EscapadeExpress.OnPlayerDeath)
     Events.OnCreatePlayer.Add(EscapadeExpress.OnCreatePlayer)
 end
 
 EscapadeExpress.OnGameStart = function()
+    enforceRealTimeDayLength()
     registerRuntimeHooks()
     EscapadeExpress.OnNewGame()
 end
@@ -91,30 +246,49 @@ end
 -- ============================================================
 
 EscapadeExpress.OnNewGame = function()
-    if scenarioInitialized then return end
-
     local pl = getPlayer()
     if pl == nil then return end
     if pl:getHoursSurvived() > 1 then return end
 
-    scenarioInitialized = true
+    if not scenarioInitialized then
+        scenarioInitialized = true
 
-    -- Le timer est synchronise par le serveur
-    EE_startTime = nil
-    EE_gameOver = false
-    timeWarningsShown = {}
+        -- Le timer est synchronise par le serveur
+        EE_startTime = nil
+        EE_gameOver = false
+        timeWarningsShown = {}
 
-    -- Marquer le joueur pour le revive
-    pl:getModData().EE_reviveEnabled = true
-    pl:getModData().EE_role = nil  -- sera assigne par le serveur
+        -- Initialisation locale une seule fois
+        pl:getModData().EE_reviveEnabled = true
+        pl:getModData().EE_role = nil  -- sera assigne par le serveur
 
-    -- Demander au serveur d'assigner un role et de synchroniser le timer
-    sendClientCommand("EscapadeExpress", "PlayerReady", {
-        username = pl:getUsername()
-    })
+        -- Message d'intro
+        pl:Say("On est pieges dans le mall! Trouvez un vehicule et un bidon d'essence!")
+    else
+        -- Rejoin / create-player tardif: garder le revive actif
+        pl:getModData().EE_reviveEnabled = true
+    end
 
-    -- Message d'intro
-    pl:Say("On est pieges dans le mall! Trouvez un vehicule et un bidon d'essence!")
+    -- Solo: fallback local car la voie client->serveur n'est pas fiable ici.
+    if isSinglePlayerRuntime() then
+        if pl:getModData().EE_role == nil then
+            applyRoleLocally(pl, "soldat")
+        end
+
+        if EE_startTime == nil then
+            EE_startTime = getGameTime():getWorldAgeHours()
+            syncWarningStateFromTimer()
+        end
+
+        return
+    end
+
+    -- Multiplayer: re-tenter tant que le role n'est pas encore confirme
+    if pl:getModData().EE_role == nil then
+        sendClientCommand("EscapadeExpress", "PlayerReady", {
+            username = pl:getUsername()
+        })
+    end
 end
 
 EscapadeExpress.OnCreatePlayer = function()
@@ -125,7 +299,11 @@ end
 -- 4. STUBS REQUIS (pattern Pillow's)
 -- ============================================================
 
-EscapadeExpress.setSandBoxVars = function() end
+EscapadeExpress.setSandBoxVars = function()
+    if SandboxVars ~= nil then
+        SandboxVars.DayLength = 26
+    end
+end
 EscapadeExpress.RemovePlayer = function(p) end
 EscapadeExpress.AddPlayer = function(p) end
 EscapadeExpress.Render = function() end
@@ -236,7 +414,13 @@ local function onServerCommand(module, command, data)
         local pl = getPlayer()
         if pl and data.username == pl:getUsername() then
             pl:getModData().EE_role = data.role
-            pl:Say("Mon role: " .. data.roleName)
+            pl:getModData().EE_localRoleApplied = data.role
+        end
+    elseif command == "RoleDenied" then
+        local pl = getPlayer()
+        if pl and data.username == pl:getUsername() then
+            pl:getModData().EE_role = nil
+            pl:getModData().EE_reviveEnabled = false
         end
     elseif command == "PlayerDown" then
         local pl = getPlayer()

@@ -4,7 +4,8 @@
 -- ============================================================
 
 local Server = {
-    roleCounter = 0,
+    playerSlots = {},
+    roleLoadouts = {},
     escapeVehicle = nil,
     gameStarted = false,
     gasCanSpawned = false,
@@ -46,7 +47,7 @@ local SHOPS = {
     {x = 11200, y = 8420, z = 0},
 }
 
--- Roles: ordre de join
+-- Roles: slots fixes par ordre de priorite
 local ROLE_ORDER = {"soldat", "voleur", "local_", "medic"}
 local ROLE_NAMES = {
     soldat = "Soldat",
@@ -163,12 +164,45 @@ local function broadcastAlert(text, alertType)
 end
 
 -- ============================================================
--- APPLIQUER UN ROLE A UN JOUEUR
+-- ASSIGNATION ET APPLICATION DES ROLES
 -- ============================================================
+
+local function assignRole(player)
+    local username = player:getUsername()
+    if username == nil then return nil end
+
+    local assignedRole = Server.playerSlots[username]
+    if assignedRole ~= nil then
+        return assignedRole
+    end
+
+    local takenRoles = {}
+    for _, takenRole in pairs(Server.playerSlots) do
+        takenRoles[takenRole] = true
+    end
+
+    for _, roleKey in ipairs(ROLE_ORDER) do
+        if not takenRoles[roleKey] then
+            Server.playerSlots[username] = roleKey
+            return roleKey
+        end
+    end
+
+    return nil
+end
 
 local function applyRole(player, roleKey)
     local def = ROLE_DEFS[roleKey]
-    if not def then return end
+    if not def then return false end
+
+    local username = player:getUsername()
+    local modData = player:getModData()
+    modData.EE_role = roleKey
+    modData.EE_reviveEnabled = true
+
+    if username ~= nil and Server.roleLoadouts[username] == roleKey then
+        return false
+    end
 
     local inv = player:getInventory()
 
@@ -191,9 +225,11 @@ local function applyRole(player, roleKey)
     player:getStats():setThirst(0.2)
     player:getStats():setFatigue(0)
 
-    local modData = player:getModData()
-    modData.EE_role = roleKey
-    modData.EE_reviveEnabled = true
+    if username ~= nil then
+        Server.roleLoadouts[username] = roleKey
+    end
+
+    return true
 end
 
 -- ============================================================
@@ -250,6 +286,17 @@ end
 
 local function ensureScenarioStarted()
     if Server.gameStarted then return false end
+
+    if SandboxVars ~= nil then
+        SandboxVars.DayLength = 26
+    end
+
+    if getGameTime ~= nil then
+        local gameTime = getGameTime()
+        if gameTime ~= nil and gameTime.setMinutesPerDay ~= nil then
+            gameTime:setMinutesPerDay(60 * 24)
+        end
+    end
 
     Server.gameStarted = true
     Server.gameOver = false
@@ -549,8 +596,8 @@ local function onGameStart()
 end
 Events.OnGameStart.Add(onGameStart)
 
-Events.EveryMinutes.Add(checkDownedPlayers)
-Events.EveryMinutes.Add(serverEveryMinutes)
+Events.EveryOneMinute.Add(checkDownedPlayers)
+Events.EveryOneMinute.Add(serverEveryMinutes)
 Events.EveryHours.Add(serverEveryHours)
 
 -- ============================================================
@@ -563,22 +610,34 @@ local function onClientCommand(module, command, player, data)
     if command == "PlayerReady" then
         ensureScenarioStarted()
 
-        local modData = player:getModData()
-        local roleKey = modData.EE_role
+        local username = player:getUsername()
+        local roleKey = assignRole(player)
 
-        if not roleKey then
-            local roleIndex = (Server.roleCounter % #ROLE_ORDER) + 1
-            roleKey = ROLE_ORDER[roleIndex]
-            Server.roleCounter = Server.roleCounter + 1
+        if roleKey == nil then
+            local modData = player:getModData()
+            modData.EE_role = nil
+            modData.EE_reviveEnabled = false
 
-            applyRole(player, roleKey)
-            print("[EE] Role assigne: " .. player:getUsername() .. " = " .. (ROLE_NAMES[roleKey] or roleKey))
+            print("[EE] Aucun role disponible pour " .. tostring(username) .. " (scenario limite a 4 joueurs)")
+            syncTimerToClients()
+            sendServerCommand("EscapadeExpress", "RoleDenied", {
+                username = username,
+                text = "Trop de joueurs pour ce scenario!"
+            })
+            return
+        end
+
+        local loadoutGranted = applyRole(player, roleKey)
+        if loadoutGranted then
+            print("[EE] Role assigne: " .. tostring(username) .. " = " .. (ROLE_NAMES[roleKey] or roleKey))
+        else
+            print("[EE] Role resynchronise: " .. tostring(username) .. " = " .. (ROLE_NAMES[roleKey] or roleKey))
         end
 
         syncTimerToClients()
 
         sendServerCommand("EscapadeExpress", "RoleAssigned", {
-            username = player:getUsername(),
+            username = username,
             role = roleKey,
             roleName = ROLE_NAMES[roleKey] or roleKey
         })
