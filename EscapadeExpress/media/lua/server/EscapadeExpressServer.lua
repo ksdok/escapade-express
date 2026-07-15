@@ -14,6 +14,9 @@ local PARKING_Y = 8550
 local PARKING_Z = 0
 
 local GAS_CAN_LOCATION = {x = 11170, y = 8490, z = 0}
+local RESPAWN_X = 11250
+local RESPAWN_Y = 8550
+local RESPAWN_Z = 0
 
 -- Roles: ordre de join
 local ROLE_ORDER = {"soldat", "voleur", "local_", "medic"}
@@ -323,26 +326,71 @@ end
 local REVIVE_TIME_MEDIC = 0.0833   -- 5 min (en heures de jeu)
 local REVIVE_TIME_OTHER = 0.1667   -- 10 min (en heures de jeu)
 local REVIVE_HEALTH = 0.5          -- HP au revive
+local RESPAWN_HEALTH = 0.3
+local REVIVE_RADIUS = 10           -- tiles
 
-local function isMedicNearby(downedPlayer, radius)
-    radius = radius or 10  -- tiles
+local function getNearbyReviverType(downedPlayer, radius)
+    radius = radius or REVIVE_RADIUS
     local players = getOnlinePlayers()
-    if players == nil then return false end
+    if players == nil then return nil end
+
+    local hasOtherNearby = false
 
     for i = 0, players:size() - 1 do
         local p = players:get(i)
         if p:getUsername() ~= downedPlayer:getUsername() then
-            local dx = math.abs(p:getX() - downedPlayer:getX())
-            local dy = math.abs(p:getY() - downedPlayer:getY())
-            if dx <= radius and dy <= radius then
-                local role = p:getModData().EE_role
-                if role == "medic" then
-                    return true
+            local otherData = p:getModData()
+            if not otherData.EE_downed then
+                local dx = math.abs(p:getX() - downedPlayer:getX())
+                local dy = math.abs(p:getY() - downedPlayer:getY())
+                if dx <= radius and dy <= radius then
+                    local role = otherData.EE_role
+                    if role == "medic" then
+                        return "medic"
+                    end
+                    hasOtherNearby = true
                 end
             end
         end
     end
-    return false
+
+    if hasOtherNearby then
+        return "other"
+    end
+
+    return nil
+end
+
+local function clearDownedState(player)
+    local modData = player:getModData()
+    modData.EE_downed = false
+    modData.EE_downTime = nil
+end
+
+local function revivePlayer(player, reviverType)
+    player:setHealth(REVIVE_HEALTH)
+    player:setKnockedDown(false)
+    clearDownedState(player)
+
+    print("[EE] " .. player:getUsername() .. " est ranime (" .. reviverType .. ")")
+    sendServerCommand("EscapadeExpress", "PlayerRevived", {
+        username = player:getUsername(),
+        reviverType = reviverType
+    })
+end
+
+local function respawnPlayerAtStart(player)
+    player:setHealth(RESPAWN_HEALTH)
+    player:setKnockedDown(false)
+    player:setX(RESPAWN_X)
+    player:setY(RESPAWN_Y)
+    player:setZ(RESPAWN_Z)
+    clearDownedState(player)
+
+    print("[EE] " .. player:getUsername() .. " respawn au depart")
+    sendServerCommand("EscapadeExpress", "PlayerRespawned", {
+        username = player:getUsername()
+    })
 end
 
 local function checkDownedPlayers()
@@ -367,25 +415,19 @@ local function checkDownedPlayers()
             })
         end
 
-        -- Verifier les joueurs a terre pour le revive
-        if modData.EE_downed then
+        -- Verifier les joueurs a terre pour le revive / respawn
+        if modData.EE_downed and modData.EE_downTime then
             local elapsed = getGameTime():getWorldAgeHours() - modData.EE_downTime
-            local reviveTime = REVIVE_TIME_OTHER
-            if isMedicNearby(p) then
-                reviveTime = REVIVE_TIME_MEDIC
-            end
+            local reviverType = getNearbyReviverType(p)
 
-            if elapsed >= reviveTime then
-                -- Ranimer le joueur
-                p:setHealth(REVIVE_HEALTH)
-                p:setKnockedDown(false)
-                modData.EE_downed = false
-                modData.EE_downTime = nil
-
-                print("[EE] " .. p:getUsername() .. " est ranime!")
-                sendServerCommand("EscapadeExpress", "PlayerRevived", {
-                    username = p:getUsername()
-                })
+            if reviverType == "medic" and elapsed >= REVIVE_TIME_MEDIC then
+                revivePlayer(p, reviverType)
+            elseif elapsed >= REVIVE_TIME_OTHER then
+                if reviverType == "medic" or reviverType == "other" then
+                    revivePlayer(p, reviverType)
+                else
+                    respawnPlayerAtStart(p)
+                end
             end
         end
     end

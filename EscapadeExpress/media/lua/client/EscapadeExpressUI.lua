@@ -18,6 +18,18 @@ local DURATION_HOURS = 3
 UI.messages = {}
 UI.messageDuration = 5  -- secondes d'affichage
 
+local function getNowSeconds()
+    if getTimestamp ~= nil then
+        return getTimestamp()
+    end
+
+    if os and os.time then
+        return os.time()
+    end
+
+    return math.floor(getGameTime():getWorldAgeHours() * 3600)
+end
+
 -- ============================================================
 -- AFFICHAGE DU CHRONOMETRE
 -- ============================================================
@@ -83,11 +95,11 @@ end
 -- ============================================================
 
 local function drawMessages()
-    local nowMs = getTimestampMs()
+    local nowSeconds = getNowSeconds()
     local y = 60
     for i = #UI.messages, 1, -1 do
         local msg = UI.messages[i]
-        local age = (nowMs - msg.time) / 1000  -- secondes
+        local age = nowSeconds - msg.time
         if age >= UI.messageDuration then
             table.remove(UI.messages, i)
         else
@@ -110,7 +122,7 @@ function UI.addMessage(text, color)
     table.insert(UI.messages, {
         text = text,
         color = color or COLOR_WHITE,
-        time = getTimestampMs()
+        time = getNowSeconds()
     })
 end
 

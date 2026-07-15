@@ -321,9 +321,22 @@ local function onServerCommand(module, command, data)
     elseif command == "PlayerRevived" then
         local pl = getPlayer()
         if pl and data.username == pl:getUsername() then
-            pl:Say("Je suis ranime!")
+            pl:getModData().EE_downed = false
+            if data.reviverType == "medic" then
+                pl:Say("Le medic m'a ranime!")
+            else
+                pl:Say("Je suis ranime!")
+            end
         elseif pl then
             pl:Say(data.username .. " est de retour!")
+        end
+    elseif command == "PlayerRespawned" then
+        local pl = getPlayer()
+        if pl and data.username == pl:getUsername() then
+            pl:getModData().EE_downed = false
+            pl:Say("Je me reveille au point de depart...")
+        elseif pl then
+            pl:Say(data.username .. " a ete renvoye au point de depart.")
         end
     elseif command == "GameOver" then
         EE_gameOver = true
