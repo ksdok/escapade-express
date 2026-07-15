@@ -28,6 +28,7 @@ local ROLE_NAMES = {
 Server.roleCounter = 0
 Server.escapeVehicle = nil
 Server.gameStarted = false
+Server.gasCanSpawned = false
 
 -- ============================================================
 -- DEFINITION DES ROLES (items + skills)
@@ -206,11 +207,17 @@ end
 -- ============================================================
 
 local function spawnGasCan()
+    if Server.gasCanSpawned then return end
+
     local sq = getCell():getGridSquare(GAS_CAN_LOCATION.x, GAS_CAN_LOCATION.y, GAS_CAN_LOCATION.z)
-    if sq == nil then return end
+    if sq == nil then
+        print("[EE] ERREUR: Impossible de trouver le square du bidon d'essence")
+        return
+    end
 
     -- Poser un bidon d'essence vide au sol
-    sq:AddItem("Base.PetrolCan")
+    sq:SpawnWorldInventoryItem("Base.PetrolCan", 0.5, 0.5, 0.0)
+    Server.gasCanSpawned = true
     print("[EE] Bidon d'essence spawn (" .. GAS_CAN_LOCATION.x .. "," .. GAS_CAN_LOCATION.y .. ")")
 end
 
@@ -389,6 +396,8 @@ end
 -- ============================================================
 
 local function onGameStart()
+    if Server.gameStarted then return end
+
     Server.gameStarted = true
     -- Delai pour s'assurer que le monde est charge
     -- Le spawn du vehicule et du bidon se fait ici
@@ -411,13 +420,19 @@ local function onClientCommand(module, command, player, data)
     if module ~= "EscapadeExpress" then return end
 
     if command == "PlayerReady" then
-        -- Assigner un role au joueur
-        local roleIndex = (Server.roleCounter % #ROLE_ORDER) + 1
-        local roleKey = ROLE_ORDER[roleIndex]
-        Server.roleCounter = Server.roleCounter + 1
+        local modData = player:getModData()
+        local roleKey = modData.EE_role
 
-        -- Appliquer le role (items + skills)
-        applyRole(player, roleKey)
+        if not roleKey then
+            -- Assigner un role au joueur
+            local roleIndex = (Server.roleCounter % #ROLE_ORDER) + 1
+            roleKey = ROLE_ORDER[roleIndex]
+            Server.roleCounter = Server.roleCounter + 1
+
+            -- Appliquer le role (items + skills)
+            applyRole(player, roleKey)
+            print("[EE] Role assigne: " .. player:getUsername() .. " = " .. (ROLE_NAMES[roleKey] or roleKey))
+        end
 
         -- Notifier le client
         sendServerCommand("EscapadeExpress", "RoleAssigned", {
@@ -425,8 +440,6 @@ local function onClientCommand(module, command, player, data)
             role = roleKey,
             roleName = ROLE_NAMES[roleKey] or roleKey
         })
-
-        print("[EE] Role assigne: " .. player:getUsername() .. " = " .. (ROLE_NAMES[roleKey] or roleKey))
 
     elseif command == "PlayerDown" then
         -- Le client signale un joueur a terre

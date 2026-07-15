@@ -3,10 +3,11 @@
 ## Contexte
 - LAN avec neveux (4 joueurs, 16+ ans, debutants)
 - Build 41, map vanilla + Xonic's Mega Mall (mod Workshop)
-- Base sur Pillow's Random Scenarios (mod Workshop ID: 2106657533)
+- Le but du projet est d'ajouter un nouveau scenario a Pillow's Random Scenarios (mod Workshop ID: 2106657533)
+- Le but N'EST PAS de creer un nouveau mode de jeu separe
 
 ## Mods requis
-- Pillow's Random Scenarios (deja installe via Steam Workshop)
+- Pillow's Random Scenarios (deja installe via Steam Workshop) -- mod cible auquel on ajoute le scenario
 - Xonic's Mega Mall (Workshop ID: 1713269594) -- a installer
 
 ## Dossier de travail
@@ -14,11 +15,25 @@
 
 ## Fichiers de reference
 - pz-mod-doc.md -- doc technique complete (API B41, pattern Pillow's, coords mall)
+- Repo GitHub: https://github.com/ksdok/escapade-express
 - Skill Hermes: project-zomboid-modding (references/api-build41.md, templates/scenario-template.lua)
 
 ---
 
 ## SCENARIO 1: "Escapade Express" -- EN COURS
+
+### Decision d'architecture (VALIDE)
+- Le projet doit rester un scenario dans le modele de Pillow's Random Scenarios
+- Le projet ne doit pas deriver vers un nouveau mode de jeu distinct
+- La structure `LastStand/Challenges` est coherente avec l'objectif du projet
+- Le multijoueur LAN reste une contrainte fonctionnelle a traiter dans ce cadre
+- Le serveur doit rester autorite pour les elements multi sensibles (revive, sync d'events, vehicule, etc.) si necessaire
+
+### Etat actuel
+- Un prototype de scenario base sur Pillow's Random Scenarios a ete cree
+- La revue a releve plusieurs problemes techniques dans ce prototype
+- Le backlog ci-dessous est redecoupe en tickets small a medium pour corriger et fiabiliser le scenario
+- Le point d'entree scenario est conserve; on corrige l'implementation plutot que changer de produit
 
 ### Concept (VALIDE)
 - 4 joueurs coop, debutants
@@ -59,32 +74,47 @@
 - [x] Compiler la doc technique (pz-mod-doc.md)
 - [x] Mettre a jour le skill Hermes project-zomboid-modding
 
-### Phase 2: Codage -- TERMINE
-- [x] Créer la structure du mod (mod.info, poster.png, dossiers)
-- [x] Coder EscapadeExpress.lua (scenario principal: spawn, roles, items, skills)
-- [x] Coder EscapadeExpressUI.lua (chronometre visible, messages)
-- [x] Coder EscapadeExpressServer.lua (revive multi, spawn vehicule)
-- [x] Implementer les 4 roles avec skills/items differents
-- [x] Implementer le chronometre 3h avec affichage
-- [x] Implementer l'augmentation progressive des zombies
-- [x] Implementer la coupure electrique (~45 min)
-- [x] Implementer l'incendie (~2h)
-- [x] Implementer le systeme de revive (medic 5 min / autre 10 min)
-- [x] Implementer le spawn du vehicule dans le parking
-- [ ] Coordonnees exactes du mall (a determiner en jeu avec debug) -- PLACEHOLDERS
+### Phase 2: Prototype scenario Pillow's -- TERMINE MAIS A CORRIGER
+- [x] Creer la structure initiale du mod (mod.info, poster.png, dossiers)
+- [x] Coder un prototype `LastStand/Challenges` base sur Pillow's Random Scenarios
+- [x] Coder une UI de chronometre/messages
+- [x] Coder une logique serveur initiale (roles, revive, vehicule)
+- [x] Faire une revue technique du prototype
+- [x] Identifier les ecarts critiques et les bugs probables
 
-### Phase 3: Test -- A FAIRE
+### Phase 3: Correctifs du scenario -- EN COURS
+- [ ] Corriger l'ordre d'initialisation du scenario (`OnGameStart`, `OnNewGame`, hooks)
+- [ ] Corriger les commandes reseau client/serveur
+- [ ] Corriger le spawn du bidon avec l'API monde correcte
+- [ ] Verifier si `getTimestampMs()` est valide, sinon remplacer
+- [ ] Revoir la logique de revive pour coller a la spec (medic 5 min / autre 10 min / sinon respawn)
+- [ ] Verifier la synchro multi des events (coupure elec, incendie, zombies, game over)
+- [ ] Garder les coordonnees en placeholders tant que le debug en jeu n'est pas fait
+
+### Phase 4: Test du scenario -- A FAIRE
 - [ ] Installer le mod dans ~/Zomboid/mods/
-- [ ] Test solo: verifier que le scenario apparait dans Challenges
+- [ ] Verifier que le scenario apparait dans Challenges via Pillow's Random Scenarios
 - [ ] Test solo: verifier spawn, items, skills, chronometre
 - [ ] Test solo: verifier coupure elec et incendie
-- [ ] Test multi (LAN): verifier revive, sync des events
+- [ ] Test multi (LAN): verifier revive, sync des events, vehicule, spawn bidon
 - [ ] Ajuster les coordonnees de spawn selon le mall
 - [ ] Ajuster la difficulte (nombre de zombies, timing des events)
 
-### Phase 4: Distribution -- A FAIRE
+### Phase 5: Distribution -- A FAIRE
 - [ ] Zipper le mod pour les neveux
 - [ ] (Optionnel) Publier sur Steam Workshop
+
+### Tickets proposes (taille small a medium)
+- [ ] EE-01 (S) - Corriger l'initialisation du scenario Pillow's (`OnGameStart`, `OnNewGame`, registration)
+- [ ] EE-02 (S) - Corriger tous les appels `sendClientCommand` / `sendServerCommand`
+- [ ] EE-03 (S) - Corriger le spawn du bidon avec `SpawnWorldInventoryItem` ou equivalent valide
+- [ ] EE-04 (S) - Verifier/remplacer `getTimestampMs()` dans l'UI
+- [ ] EE-05 (M) - Revoir la logique de revive pour respecter la spec et le multijoueur
+- [ ] EE-06 (M) - Fiabiliser l'assignation des 4 roles et des items/skills au lancement du scenario
+- [ ] EE-07 (M) - Fiabiliser la synchro multi des evenements scripts cote serveur
+- [ ] EE-08 (S) - Nettoyer les messages dupliques client/UI
+- [ ] EE-09 (S) - Definir et documenter les placeholders de coords du mall dans le code
+- [ ] EE-10 (M) - Ajouter un plan de test minimal solo + LAN pour le scenario complet
 
 ---
 
@@ -106,6 +136,11 @@
    - setHaveElectricity est par square, cote serveur
    - Peut necessiter du code serveur pour autorite
 
+4. LIMITES DU MODELE SCENARIO EN LAN
+   - Le point d'entree scenario est voulu, mais il faut verifier son comportement reel en LAN
+   - Certaines mecaniques peuvent etre plus fragiles en multi qu'en solo
+   - Les tests LAN sont donc obligatoires avant d'ajouter plus de complexite
+
 ---
 
 ## HISTORIQUE
@@ -118,3 +153,7 @@
 - 2026-07-15: Skill Hermes project-zomboid-modding mis a jour (api-build41.md, scenario-template.lua)
 - 2026-07-15: Dossier de travail cree: /Users/kim/Documents/Zomboid/
 - 2026-07-15: backlog project-state.md cree
+- 2026-07-15: Repo GitHub cree: https://github.com/ksdok/escapade-express
+- 2026-07-15: Revue du prototype initial terminee
+- 2026-07-15: Clarification: le but est d'ajouter un scenario a Pillow's Random Scenarios, pas de creer un nouveau mode
+- 2026-07-15: Backlog redecoupe en tickets small a medium pour corriger et fiabiliser ce scenario

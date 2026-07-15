@@ -54,6 +54,10 @@ EE_fireWarningDone = false
 EE_gameOver = false
 EE_escapeVehicleSpawned = false
 
+local runtimeHooksRegistered = false
+local gameStartEventRegistered = false
+local scenarioInitialized = false
+
 -- ============================================================
 -- 1. REGISTRATION (pattern Pillow's)
 -- ============================================================
@@ -66,15 +70,28 @@ end
 -- 2. HOOKS D'EVENEMENTS
 -- ============================================================
 
-EscapadeExpress.OnGameStart = function()
-    Events.OnGameStart.Add(EscapadeExpress.OnNewGame)
+local function registerRuntimeHooks()
+    if runtimeHooksRegistered then return end
+
+    runtimeHooksRegistered = true
     Events.EveryMinutes.Add(EscapadeExpress.EveryMinutes)
     Events.EveryHours.Add(EscapadeExpress.EveryHours)
     Events.OnPlayerDeath.Add(EscapadeExpress.OnPlayerDeath)
+    Events.OnCreatePlayer.Add(EscapadeExpress.OnCreatePlayer)
+end
+
+EscapadeExpress.OnGameStart = function()
+    registerRuntimeHooks()
+    EscapadeExpress.OnNewGame()
 end
 
 EscapadeExpress.OnInitWorld = function()
-    Events.OnGameStart.Add(EscapadeExpress.OnGameStart)
+    scenarioInitialized = false
+
+    if not gameStartEventRegistered then
+        Events.OnGameStart.Add(EscapadeExpress.OnGameStart)
+        gameStartEventRegistered = true
+    end
 end
 
 -- ============================================================
@@ -82,27 +99,36 @@ end
 -- ============================================================
 
 EscapadeExpress.OnNewGame = function()
+    if scenarioInitialized then return end
+
     local pl = getPlayer()
-    if pl:getHoursSurvived() <= 1 then
-        -- Initialiser le timer
-        EE_startTime = getGameTime():getWorldAgeHours()
-        EE_powerOutageDone = false
-        EE_fireDone = false
-        EE_fireWarningDone = false
-        EE_gameOver = false
+    if pl == nil then return end
+    if pl:getHoursSurvived() > 1 then return end
 
-        -- Marquer le joueur pour le revive
-        pl:getModData().EE_reviveEnabled = true
-        pl:getModData().EE_role = nil  -- sera assigne par le serveur
+    scenarioInitialized = true
 
-        -- Demander au serveur d'assigner un role et de donner items
-        sendClientCommand(pl, "EscapadeExpress", "PlayerReady", {
-            username = pl:getUsername()
-        })
+    -- Initialiser le timer
+    EE_startTime = getGameTime():getWorldAgeHours()
+    EE_powerOutageDone = false
+    EE_fireDone = false
+    EE_fireWarningDone = false
+    EE_gameOver = false
 
-        -- Message d'intro
-        pl:Say("On est pieges dans le mall! Trouvez un vehicule et un bidon d'essence!")
-    end
+    -- Marquer le joueur pour le revive
+    pl:getModData().EE_reviveEnabled = true
+    pl:getModData().EE_role = nil  -- sera assigne par le serveur
+
+    -- Demander au serveur d'assigner un role et de donner items
+    sendClientCommand("EscapadeExpress", "PlayerReady", {
+        username = pl:getUsername()
+    })
+
+    -- Message d'intro
+    pl:Say("On est pieges dans le mall! Trouvez un vehicule et un bidon d'essence!")
+end
+
+EscapadeExpress.OnCreatePlayer = function()
+    EscapadeExpress.OnNewGame()
 end
 
 -- ============================================================
@@ -158,7 +184,7 @@ EscapadeExpress.EveryMinutes = function()
         local pl = getPlayer()
         if pl then pl:Say("Coupure de courant! Les lumieres sont eteintes.") end
         -- Le serveur gere l'autorite de l'electricite
-        sendClientCommand(getPlayer(), "EscapadeExpress", "PowerOutage", {})
+        sendClientCommand("EscapadeExpress", "PowerOutage", {})
         -- Jouer un son
         if pl then pl:playSound("LightbulbBurnedOut") end
     end
@@ -181,7 +207,7 @@ EscapadeExpress.EveryMinutes = function()
             pl:playSound("SmallExplosion")
         end
         -- Le serveur demarre le feu (autorite)
-        sendClientCommand(getPlayer(), "EscapadeExpress", "StartFire", {
+        sendClientCommand("EscapadeExpress", "StartFire", {
             x = shop.x, y = shop.y, z = shop.z
         })
     end
@@ -192,7 +218,7 @@ EscapadeExpress.EveryMinutes = function()
         local pl = getPlayer()
         if pl then pl:Say("TEMPS ECOULE! Les zombies envahissent le mall!") end
         -- Horde massive: le serveur spawn beaucoup de zombies
-        sendClientCommand(getPlayer(), "EscapadeExpress", "GameOver", {})
+        sendClientCommand("EscapadeExpress", "GameOver", {})
     end
 
     -- === WARNINGS TEMPS ===
@@ -221,6 +247,9 @@ end
 EscapadeExpress.EveryHours = function()
     if EE_startTime == nil or EE_gameOver then return end
 
+    local pl = getPlayer()
+    if pl == nil then return end
+
     local elapsed = getGameTime():getWorldAgeHours() - EE_startTime
 
     -- Densite selon le temps ecoule
@@ -235,7 +264,7 @@ EscapadeExpress.EveryHours = function()
 
     -- Le serveur spawn les zombies (autorite en MP)
     for _, entrance in ipairs(MALL_ENTRANCES) do
-        sendClientCommand(getPlayer(), "EscapadeExpress", "SpawnZombies", {
+        sendClientCommand("EscapadeExpress", "SpawnZombies", {
             x = entrance.x, y = entrance.y, z = entrance.z,
             count = count
         })
@@ -247,6 +276,8 @@ end
 -- ============================================================
 
 EscapadeExpress.OnPlayerDeath = function(player)
+    if player == nil then return end
+
     local modData = player:getModData()
     if modData.EE_reviveEnabled and not EE_gameOver then
         -- Empecher la mort: le serveur gerera le revive
@@ -256,7 +287,7 @@ EscapadeExpress.OnPlayerDeath = function(player)
         modData.EE_downed = true
 
         -- Informer le serveur
-        sendClientCommand(player, "EscapadeExpress", "PlayerDown", {
+        sendClientCommand("EscapadeExpress", "PlayerDown", {
             username = player:getUsername(),
             x = player:getX(),
             y = player:getY(),
