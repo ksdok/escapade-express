@@ -12,7 +12,7 @@ EscapadeExpress = {}
 -- Procedure: mode debug, teleporter a la position, lire coords
 -- ============================================================
 
-local SPAWN = {xcell = 37, ycell = 28, x = 150, y = 150, z = 0}
+local SPAWN = {xcell = 37, ycell = 28, x = 120, y = 120, z = 0}  -- placeholder arriere-boutique
 
 -- Parking du mall (placeholder)
 local PARKING_X = 11250
@@ -175,14 +175,16 @@ Events.OnChallengeQuery.Add(EscapadeExpress.Add)
 EscapadeExpress.EveryMinutes = function()
     if EE_startTime == nil or EE_gameOver then return end
 
+    local pl = getPlayer()
+    if pl == nil then return end
+
     local elapsed = getGameTime():getWorldAgeHours() - EE_startTime
     local remaining = DURATION_HOURS - elapsed
 
     -- === COUPURE ELECTRIQUE (~45 min) ===
     if not EE_powerOutageDone and elapsed >= POWER_OUTAGE_TIME then
         EE_powerOutageDone = true
-        local pl = getPlayer()
-        if pl then pl:Say("Coupure de courant! Les lumieres sont eteintes.") end
+        pl:Say("Coupure de courant! Les lumieres sont eteintes.")
         -- Le serveur gere l'autorite de l'electricite
         sendClientCommand("EscapadeExpress", "PowerOutage", {})
         -- Jouer un son
@@ -192,8 +194,7 @@ EscapadeExpress.EveryMinutes = function()
     -- === WARNING INCENDIE (~1h54) ===
     if not EE_fireWarningDone and elapsed >= FIRE_WARNING_TIME then
         EE_fireWarningDone = true
-        local pl = getPlayer()
-        if pl then pl:Say("Je sens de la fumee... Un incendie pourrait demarrer!") end
+        pl:Say("Je sens de la fumee... Un incendie pourrait demarrer!")
     end
 
     -- === INCENDIE (~2h) ===
@@ -201,11 +202,8 @@ EscapadeExpress.EveryMinutes = function()
         EE_fireDone = true
         -- Choisir une boutique au hasard
         local shop = SHOPS[ZombRand(#SHOPS) + 1]
-        local pl = getPlayer()
-        if pl then
-            pl:Say("Un incendie! Le feu se propage!")
-            pl:playSound("SmallExplosion")
-        end
+        pl:Say("Un incendie! Le feu se propage!")
+        pl:playSound("SmallExplosion")
         -- Le serveur demarre le feu (autorite)
         sendClientCommand("EscapadeExpress", "StartFire", {
             x = shop.x, y = shop.y, z = shop.z
@@ -215,8 +213,7 @@ EscapadeExpress.EveryMinutes = function()
     -- === FIN DU TIMER (3h) ===
     if remaining <= 0 and not EE_gameOver then
         EE_gameOver = true
-        local pl = getPlayer()
-        if pl then pl:Say("TEMPS ECOULE! Les zombies envahissent le mall!") end
+        pl:Say("TEMPS ECOULE! Les zombies envahissent le mall!")
         -- Horde massive: le serveur spawn beaucoup de zombies
         sendClientCommand("EscapadeExpress", "GameOver", {})
     end
@@ -225,17 +222,13 @@ EscapadeExpress.EveryMinutes = function()
     if remaining > 0 then
         local remainingMin = math.floor(remaining * 60)
         if remainingMin == 120 then
-            local pl = getPlayer()
-            if pl then pl:Say("Plus que 2 heures!") end
+            pl:Say("Plus que 2 heures!")
         elseif remainingMin == 60 then
-            local pl = getPlayer()
-            if pl then pl:Say("Plus que 1 heure!") end
+            pl:Say("Plus que 1 heure!")
         elseif remainingMin == 30 then
-            local pl = getPlayer()
-            if pl then pl:Say("Plus que 30 minutes! Depechez-vous!") end
+            pl:Say("Plus que 30 minutes! Depechez-vous!")
         elseif remainingMin == 10 then
-            local pl = getPlayer()
-            if pl then pl:Say("Plus que 10 minutes!") end
+            pl:Say("Plus que 10 minutes!")
         end
     end
 end

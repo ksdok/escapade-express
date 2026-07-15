@@ -14,8 +14,8 @@ local PARKING_Y = 8550
 local PARKING_Z = 0
 
 local GAS_CAN_LOCATION = {x = 11170, y = 8490, z = 0}
-local RESPAWN_X = 11250
-local RESPAWN_Y = 8550
+local RESPAWN_X = 11220  -- placeholder arriere-boutique, doit rester distinct du parking
+local RESPAWN_Y = 8520
 local RESPAWN_Z = 0
 
 -- Roles: ordre de join
