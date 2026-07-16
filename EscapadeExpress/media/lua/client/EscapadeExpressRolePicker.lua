@@ -5,27 +5,99 @@ EscapadeExpressRolePicker = EscapadeExpressRolePicker or {}
 
 local RolePickerPanel = ISPanel:derive("EscapadeExpressRolePickerPanel")
 
-local ROLE_ORDER = {"soldat", "voleur", "local_", "medic"}
+local ROLE_ORDER = {
+    "soldat", "voleur", "local_", "medic",
+    "rambo", "sniper", "samourai", "geek",
+    "survivaliste", "pompier", "mecanicien", "athlete",
+    "eclaireur", "demolisseur", "invincible", "mule",
+    "civil",
+}
+
 local ROLE_INFO = {
     soldat = {
         name = "Soldat",
         summary = "Combat / protection",
-        strengths = "Pistolet, robustesse, couverture",
+        strengths = "Pistolet, robustesse",
     },
     voleur = {
         name = "Voleur",
         summary = "Furtivite / utilitaire",
-        strengths = "Discretion, crowbar, mobilite",
+        strengths = "Crowbar, discretion",
     },
     local_ = {
         name = "Local",
         summary = "Survie / ressources",
-        strengths = "Outils, vivres, sac a dos",
+        strengths = "Outils, vivres, sac",
     },
     medic = {
         name = "Medic",
         summary = "Soin / support",
-        strengths = "Bandages, soins, secours",
+        strengths = "Bandages, secours",
+    },
+    rambo = {
+        name = "Rambo",
+        summary = "Tank melee",
+        strengths = "Hache, endurance, peur basse",
+    },
+    sniper = {
+        name = "Sniper",
+        summary = "Tir longue distance",
+        strengths = ".308, lunette x4, discretion",
+    },
+    samourai = {
+        name = "Samourai",
+        summary = "Katana / mobilite",
+        strengths = "Katana, agilite",
+    },
+    geek = {
+        name = "Geek",
+        summary = "Electronique / support",
+        strengths = "Repare, craft, bidouille",
+    },
+    survivaliste = {
+        name = "Survivaliste",
+        summary = "Autonomie / nature",
+        strengths = "Feu, pieges, vivres",
+    },
+    pompier = {
+        name = "Pompier",
+        summary = "Sauvetage / anti-feu",
+        strengths = "Extincteur, hache, secours",
+    },
+    mecanicien = {
+        name = "Mecanicien",
+        summary = "Vehicule / reparations",
+        strengths = "Van, pneus, soudure",
+    },
+    athlete = {
+        name = "Athlete",
+        summary = "Vitesse / mobilite",
+        strengths = "Course, esquive, endurance",
+    },
+    eclaireur = {
+        name = "Eclaireur",
+        summary = "Exploration / guide",
+        strengths = "Machete, carte, discretion",
+    },
+    demolisseur = {
+        name = "Demolisseur",
+        summary = "Explosions / chaos",
+        strengths = "Bombes, molotovs, masse",
+    },
+    invincible = {
+        name = "Invincible",
+        summary = "Tout au max",
+        strengths = "M16, Magnum, Katana",
+    },
+    mule = {
+        name = "Mule",
+        summary = "Transport / stockage",
+        strengths = "Gros sac, bidon, vivres",
+    },
+    civil = {
+        name = "Civil",
+        summary = "Mode difficile / lambda",
+        strengths = "Aucune specialite, survie pure",
     },
 }
 
@@ -100,13 +172,35 @@ function RolePickerPanel:createChildren()
     if self.roleButtons ~= nil then return end
 
     self.roleButtons = {}
-    self.rowTop = 70
-    self.rowHeight = 92
-    self.buttonWidth = 150
+    self.cardLayouts = {}
+    self.rowTop = 82
+    self.rowHeight = 74
+    self.cardHeight = 68
+    self.columns = 3
+    self.rowsPerColumn = 6
+    self.columnGap = 16
+    self.buttonWidth = 118
+    self.buttonHeight = 24
+
+    local contentWidth = self.width - 32
+    self.cardWidth = math.floor((contentWidth - self.columnGap) / self.columns)
 
     for index, roleKey in ipairs(ROLE_ORDER) do
-        local y = self.rowTop + ((index - 1) * self.rowHeight) + 44
-        local button = ISButton:new(self.width - self.buttonWidth - 24, y, self.buttonWidth, 28, "Choisir ce role", self, RolePickerPanel.onChooseRole)
+        local column = math.floor((index - 1) / self.rowsPerColumn)
+        local row = (index - 1) % self.rowsPerColumn
+        local x = 16 + (column * (self.cardWidth + self.columnGap))
+        local y = self.rowTop + (row * self.rowHeight)
+
+        self.cardLayouts[roleKey] = {
+            x = x,
+            y = y,
+            width = self.cardWidth,
+            height = self.cardHeight,
+        }
+
+        local buttonX = x + self.cardWidth - self.buttonWidth - 10
+        local buttonY = y + self.cardHeight - self.buttonHeight - 8
+        local button = ISButton:new(buttonX, buttonY, self.buttonWidth, self.buttonHeight, "Choisir", self, RolePickerPanel.onChooseRole)
         button.internal = roleKey
         button:initialise()
         button:instantiate()
@@ -150,7 +244,7 @@ function RolePickerPanel:updateButtons()
     for _, roleKey in ipairs(ROLE_ORDER) do
         local button = self.roleButtons[roleKey]
         local state = EscapadeExpressRolePicker.roleStates[roleKey] or {taken = false, takenBy = nil}
-        local title = "Choisir ce role"
+        local title = "Choisir"
         local enabled = true
 
         if EscapadeExpressRolePicker.mode == "solo" then
@@ -159,7 +253,7 @@ function RolePickerPanel:updateButtons()
                 enabled = false
             end
         elseif state.taken then
-            title = "Role pris"
+            title = "Pris"
             enabled = false
         elseif EscapadeExpressRolePicker.pendingRole == roleKey then
             title = "Validation..."
@@ -175,27 +269,28 @@ function RolePickerPanel:prerender()
     ISPanel.prerender(self)
 
     self:drawTextCentre("Choisis ton role", self.width / 2, 12, 1, 1, 1, 1, UIFont.Medium)
-    self:drawText("Le chrono commencera quand la selection initiale sera terminee.", 16, 40, 0.9, 0.9, 0.9, 1, UIFont.Small)
+    self:drawText("16 roles uniques + Civil selectionnable. Si tout est pris, Civil devient le fallback automatique.", 16, 40, 0.9, 0.9, 0.9, 1, UIFont.Small)
+    self:drawText("Le chrono commencera quand la selection initiale sera terminee.", 16, 58, 0.9, 0.9, 0.9, 1, UIFont.Small)
 end
 
 function RolePickerPanel:render()
     ISPanel.render(self)
 
-    for index, roleKey in ipairs(ROLE_ORDER) do
+    for _, roleKey in ipairs(ROLE_ORDER) do
         local info = ROLE_INFO[roleKey]
         local state = EscapadeExpressRolePicker.roleStates[roleKey] or {taken = false, takenBy = nil}
-        local top = self.rowTop + ((index - 1) * self.rowHeight)
-        local rowX = 16
-        local rowY = top
-        local rowWidth = self.width - 32
-        local rowHeight = self.rowHeight - 10
+        local layout = self.cardLayouts[roleKey]
+        local rowX = layout.x
+        local rowY = layout.y
+        local rowWidth = layout.width
+        local rowHeight = layout.height
 
         self:drawRect(rowX, rowY, rowWidth, rowHeight, COLOR_ROW.a, COLOR_ROW.r, COLOR_ROW.g, COLOR_ROW.b)
         self:drawRectBorder(rowX, rowY, rowWidth, rowHeight, 0.8, 0.35, 0.35, 0.35)
 
-        self:drawText(info.name, rowX + 12, rowY + 10, 1, 1, 1, 1, UIFont.Medium)
-        self:drawText(info.summary, rowX + 12, rowY + 34, 0.85, 0.85, 0.85, 1, UIFont.Small)
-        self:drawText("Forces: " .. info.strengths, rowX + 12, rowY + 54, 0.72, 0.72, 0.72, 1, UIFont.Small)
+        self:drawText(info.name, rowX + 10, rowY + 8, 1, 1, 1, 1, UIFont.Medium)
+        self:drawText(info.summary, rowX + 10, rowY + 28, 0.86, 0.86, 0.86, 1, UIFont.Small)
+        self:drawText(info.strengths, rowX + 10, rowY + 44, 0.72, 0.72, 0.72, 1, UIFont.Small)
 
         local statusText = "Disponible"
         local statusColor = COLOR_AVAILABLE
@@ -207,12 +302,12 @@ function RolePickerPanel:render()
             statusColor = COLOR_PENDING
         end
 
-        self:drawText(statusText, rowX + 12, rowY + 72, statusColor.r, statusColor.g, statusColor.b, statusColor.a, UIFont.Small)
+        self:drawText(statusText, rowX + 10, rowY + 58, statusColor.r, statusColor.g, statusColor.b, statusColor.a, UIFont.Small)
     end
 
     if EscapadeExpressRolePicker.statusText ~= nil then
         local c = EscapadeExpressRolePicker.statusColor or COLOR_WHITE
-        self:drawTextCentre(EscapadeExpressRolePicker.statusText, self.width / 2, self.height - 28, c.r, c.g, c.b, c.a, UIFont.Small)
+        self:drawTextCentre(EscapadeExpressRolePicker.statusText, self.width / 2, self.height - 24, c.r, c.g, c.b, c.a, UIFont.Small)
     end
 end
 
@@ -245,10 +340,10 @@ function EscapadeExpressRolePicker.open(mode, roleStates)
         return EscapadeExpressRolePicker.panel
     end
 
-    local width = 620
-    local height = 460
-    local x = math.floor((getCore():getScreenWidth() - width) / 2)
-    local y = math.floor((getCore():getScreenHeight() - height) / 2)
+    local width = math.min(1040, getCore():getScreenWidth() - 20)
+    local height = math.min(620, getCore():getScreenHeight() - 20)
+    local x = math.max(10, math.floor((getCore():getScreenWidth() - width) / 2))
+    local y = math.max(10, math.floor((getCore():getScreenHeight() - height) / 2))
 
     local panel = RolePickerPanel:new(x, y, width, height)
     panel:initialise()

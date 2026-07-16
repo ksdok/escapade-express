@@ -86,6 +86,19 @@ local function drawRole()
         voleur = "Voleur",
         local_ = "Local",
         medic = "Medic",
+        rambo = "Rambo",
+        sniper = "Sniper",
+        samourai = "Samourai",
+        geek = "Geek",
+        survivaliste = "Survivaliste",
+        pompier = "Pompier",
+        mecanicien = "Mecanicien",
+        athlete = "Athlete",
+        eclaireur = "Eclaireur",
+        demolisseur = "Demolisseur",
+        invincible = "Invincible",
+        mule = "Mule",
+        civil = "Civil",
     }
     local name = roleNames[role] or role
     local text = "Role: " .. name

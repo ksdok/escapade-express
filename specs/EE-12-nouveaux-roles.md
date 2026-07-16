@@ -3,11 +3,16 @@
 ## Contexte
 
 Le scenario a actuellement 4 roles (Soldat, Voleur, Local, Medic) choisis via
-le role picker UI (EE-13). L'utilisateur veut ajouter 12 nouveaux roles.
+le role picker UI (EE-13). L'utilisateur veut ajouter **12 nouveaux roles
+principaux** et **1 role Civil**.
 
-Avec 16 roles au total, le scenario supporte jusqu'a 16 joueurs en LAN. Au-dela de
-16 joueurs, les joueurs supplementaires recoivent le role **Civil** -- un citoyen
-lambda qui faisait ses courses dans le centre commercial quand l'apocalypse a commence.
+Avec 17 roles au total (16 roles principaux + 1 Civil), le scenario
+supporte autant de joueurs LAN que necessaire. Les **16 roles principaux**
+sont choisissables via le picker, et **Civil** doit aussi etre selectionnable
+volontairement pour un mode difficile. Les joueurs au-dela de 16 peuvent aussi
+recevoir automatiquement le role **Civil** -- un citoyen lambda qui faisait ses
+courses dans le centre commercial quand l'apocalypse a commence. Le role Civil
+ne doit pas bloquer les autres joueurs et peut etre attribue a plusieurs joueurs.
 
 ## Item IDs verifies
 
@@ -136,7 +141,7 @@ Base de donnees: 2283 items vanilla B41, verifies le 2026-07-16.
 - `Base.Thread` (Thread, Drainable) -- fil
 - `Base.Twine` (Twine, Material) -- ficelle
 
-## Concept des 12 nouveaux roles
+## Concept des 12 nouveaux roles (+ Civil selectable/fallback)
 
 ### Rambo
 - Profil: combattant rapproche agressif, gros degats, peu de discretion
@@ -560,37 +565,47 @@ Base de donnees: 2283 items vanilla B41, verifies le 2026-07-16.
 
 ### A. Systeme d'assignation
 
-Le role picker UI (EE-13) affiche actuellement 4 roles. Avec 16 roles, il faut:
+Le role picker UI (EE-13) affiche actuellement 4 roles. Avec 17 cartes a
+l'ecran (16 roles uniques + Civil), il faut:
 
-1. Etendre `ROLE_ORDER` a 16 entrees
-2. Etendre `ROLE_DEFS` avec les 12 nouveaux roles
+1. Etendre la liste des roles uniques a 16 entrees
+2. Etendre `ROLE_DEFS` avec les 12 nouveaux roles + `civil`
 3. Le systeme de slots de EE-06 gere deja >4 joueurs
-4. Le role picker (EscapadeExpressRolePicker.lua) affichera les 16 roles
-5. La fenetre du picker devra scroller ou reduire la hauteur par role
+4. Le role picker (EscapadeExpressRolePicker.lua) affichera les 16 roles + Civil
+5. La fenetre du picker devra rester lisible sans scroll lourd
 
 ### B. Limite de joueurs
 
-Avec 16 roles au picker + le Civil, le scenario supporte 17 roles jouables.
-Au-dela:
-- Le picker s'ouvre mais tous les roles sont pris (y compris Civil)
-- Le joueur supplementaire recoit automatiquement le role **Civil**
-- Le role Civil apparait dans le picker -- un joueur peut le choisir
-  volontairement pour un mode difficile
-- Pas de limite stricte de joueurs -- tous les joueurs au-dela de 17 sont des Civils
+Le picker doit proposer **16 roles uniques** (les 4 existants + 12 nouveaux)
+**plus Civil** comme option volontaire.
+Quand les 16 roles uniques sont tous pris:
+- le joueur supplementaire **ne doit pas etre refuse**
+- le serveur peut lui assigner automatiquement le role **Civil**
+- le role Civil peut etre attribue a un nombre illimite de joueurs
+- le role Civil reste aussi selectionnable manuellement pour un mode difficile
 
-### C. Hauteur du role picker
+Consequence d'implementation:
+- la logique de capacite continue de raisonner sur les **16 roles uniques**
+- `ROLE_NAMES` et `ROLE_DEFS` contiennent aussi `civil`
+- `hasFreeRole()` ne teste que les 16 roles uniques
+- `RolePickerReady` peut basculer directement vers `civil` quand aucun role unique
+  n'est libre
+- `ChooseRole` doit accepter explicitement `civil`
+
+### C. Taille du role picker
 
 Le picker actuel a `rowHeight = 92` et `height = 460` pour 4 roles.
 
-Pour 17 roles, deux options:
-- Option A: `height = 92 * 17 + 70 = 1634` -- tres grand, peut deborder de l'ecran
-- Option B: Reduire `rowHeight = 60` -> `height = 60 * 17 + 70 = 1090` -- plus compact
-- Option C (recommandee): `rowHeight = 65`, `height = 65 * 17 + 70 = 1175`, avec scroll
-  via `ISPanel: setScrollable(true)` ou `ISScrollingListBox`
+Avec 17 cartes, un simple empilement vertical resterait trop haut meme avec des
+rows compactes. La solution la plus simple et la plus robuste pour B41 est:
+- passer sur une **grille 3 colonnes x 6 lignes**
+- garder `Civil` comme 17e carte dans la derniere colonne
+- reduire `rowHeight` a ~72
+- garder un panneau compact d'environ 1040x620
 
-Recommandation: reduire rowHeight a 65 et ajouter du scroll si l'ecran est
-trop petit. Les informations affichees par role (nom, resume, forces, statut)
-tiennent en 65px si on compacte le texte.
+Recommandation: preferer une grille compacte plutot qu'un scroll custom.
+Cela evite de dependre d'une API UI B41 incertaine et garde tous les roles
+visibles sans debordement majeur sur un ecran standard.
 
 ## Implementation
 
@@ -603,7 +618,6 @@ local ROLE_ORDER = {
     "rambo", "sniper", "samourai", "geek", "survivaliste",
     "pompier", "mecanicien", "athlete", "eclaireur",
     "demolisseur", "invincible", "mule",
-    "civil",  -- fallback pour les joueurs au-dela de 16
 }
 
 local ROLE_NAMES = {
@@ -634,7 +648,7 @@ local ROLE_ORDER = {
     "rambo", "sniper", "samourai", "geek", "survivaliste",
     "pompier", "mecanicien", "athlete", "eclaireur",
     "demolisseur", "invincible", "mule",
-    "civil",  -- mode difficile: les joueurs peuvent choisir Civil volontairement
+    "civil",
 }
 
 local ROLE_INFO = {
@@ -718,13 +732,12 @@ local ROLE_INFO = {
         summary = "Porteur / transport / stockage",
         strengths = "Gros sac, bidon d'essence, nourriture pour le groupe",
     },
-    civil = {
-        name = "Civil",
-        summary = "Citoyen lambda / mode difficile",
-        strengths = "Aucune -- pour les joueurs qui veulent un vrai challenge",
-    },
 }
 ```
+
+Note: cote serveur, il est acceptable de conserver une liste separee pour les
+16 roles uniques utilises par la logique de capacite, tant que `civil` reste
+selectionnable dans le picker et accepte par `ChooseRole`.
 
 ### B. Etendre ROLE_DEFS (serveur)
 
@@ -1201,26 +1214,121 @@ local roleNames = {
 }
 ```
 
-### E. Ajuster la hauteur du role picker
+### E. Ajuster la presentation du role picker
 
-Pour 17 roles, reduire rowHeight et ajouter du scroll:
+Pour 17 cartes, utiliser une grille 3 colonnes plutot qu'une longue liste:
 
 ```lua
 -- EscapadeExpressRolePicker.lua
--- Option recommandee: rowHeight = 65, scroll si necessaire
-self.rowHeight = 65  -- etait 92
--- height: 65 * 17 + 70 (header) = 1175
--- Si l'ecran est trop petit, utiliser setScrollable ou un scrollbar
+self.rowHeight = 72
+self.columnGap = 16
+self.columns = 3
+self.rowsPerColumn = 6
 
 -- Dans EscapadeExpressRolePicker.open():
-local width = 620
-local height = 1110  -- ou utiliser getCore():getScreenHeight() - 40 avec scroll
+local width = 1040
+local height = 620
 ```
 
-Alternative: utiliser `ISScrollingListBox` ou `ISPanel` avec scrollbar integree
-pour s'adapter a toutes les tailles d'ecran.
+Chaque carte de role reste compacte (nom, resume, forces, statut, bouton) et
+l'ensemble tient entierement a l'ecran sans scroll custom.
 
-### F. Perks utilises (tous confirmes en B41)
+### F. Equipement automatique des items au spawn
+
+Chaque ROLE_DEFS peut contenir un champ `equipped` optionnel qui indique quels
+items doivent etre automatiquement equipes sur le joueur apres l'ajout dans
+l'inventaire. Ceci equipe l'arme principale en main et les protections (vetements,
+casque, sac a dos) sur le corps.
+
+#### Structure du champ `equipped`
+
+```lua
+equipped = {
+    primary = "Base.AssaultRifle",   -- arme principale (main droite)
+    secondary = nil,                  -- arme secondaire (main gauche, optionnel)
+    bag = "Base.Bag_ALICEpack_Army",  -- sac a dos (setClothingItem_Back)
+    clothes = {                       -- vetements a porter (setWornItem)
+        "Base.Hat_RiotHelmet",
+        "Base.Jacket_CoatArmy",
+        "Base.Trousers",
+        "Base.Shoes_ArmyBoots",
+    },
+},
+```
+
+#### API B41 utilisee
+
+```lua
+-- Dans applyRole, apres avoir ajoute tous les items a l'inventaire:
+if def.equipped then
+    -- Equiper l'arme principale (main droite)
+    if def.equipped.primary then
+        local weapon = inv:FindAndReturn(def.equipped.primary)
+        if weapon then
+            player:setPrimaryHandItem(weapon)
+        end
+    end
+
+    -- Equiper l'arme secondaire (main gauche, optionnel)
+    if def.equipped.secondary then
+        local secondary = inv:FindAndReturn(def.equipped.secondary)
+        if secondary then
+            player:setSecondaryHandItem(secondary)
+        end
+    end
+
+    -- Equiper le sac a dos
+    if def.equipped.bag then
+        local bag = inv:FindAndReturn(def.equipped.bag)
+        if bag then
+            player:setClothingItem_Back(bag)
+        end
+    end
+
+    -- Equiper les vetements / protections
+    if def.equipped.clothes then
+        for _, clothId in ipairs(def.equipped.clothes) do
+            local cloth = inv:FindAndReturn(clothId)
+            if cloth and cloth:getBodyLocation() ~= nil then
+                player:setWornItem(cloth:getBodyLocation(), cloth)
+            end
+        end
+    end
+end
+```
+
+Notes:
+- `inv:FindAndReturn(itemId)` retrouve un item deja ajoute dans l'inventaire
+- `cloth:getBodyLocation()` retourne le slot corporel (Hat, Jacket, Trousers, Shoes, etc.)
+- `setWornItem` equipe automatiquement au bon emplacement
+- `setClothingItem_Back` equipe le sac a dos dans le slot dos
+- `setPrimaryHandItem` met l'arme dans la main droite (arme active)
+- Le serveur a l'autorite sur le player object en MP, donc ces appels fonctionnent
+- L'equipement n'est applique qu'une seule fois (garanti par le guard `roleLoadouts`)
+
+#### Equipement par role
+
+| Role | Arme principale | Sac a dos | Vetements equipes |
+|------|----------------|-----------|-------------------|
+| Soldat | Base.Pistol | -- | Hoodie, Trousers |
+| Voleur | Base.Crowbar | -- | Hoodie, Trousers, Shoes_Black |
+| Local | Base.Hammer | Bag_NormalHikingBag | -- |
+| Medic | -- | Bag_DuffelBag | Trousers, Shoes_Black |
+| Rambo | Base.Axe | Bag_NormalHikingBag | Jacket_Black, Trousers, Shoes_Black |
+| Sniper | Base.HuntingRifle | Bag_NormalHikingBag | Jacket_ArmyCamoGreen, Trousers, Shoes_Black |
+| Samourai | Base.Katana | Bag_NormalHikingBag | Hoodie, Trousers, Shoes_Black |
+| Geek | Base.Screwdriver | Bag_Schoolbag | Hoodie, Trousers, Shoes_Black |
+| Survivaliste | Base.HandAxe | Bag_SurvivorBag | Jacket_CoatArmy, Trousers, Shoes_Strapped |
+| Pompier | Base.Axe | Bag_NormalHikingBag | Hat_Fireman, Jacket_Fireman, Trousers_Fireman, Shoes_ArmyBoots |
+| Mecanicien | Base.Wrench | Bag_NormalHikingBag | Jacket_Black, Trousers, Shoes_ArmyBoots |
+| Athlete | -- | Bag_NormalHikingBag | Hoodie, Trousers, Shoes_BlueTrainers |
+| Eclaireur | Base.Machete | Bag_NormalHikingBag | Jacket_ArmyCamoDesert, Trousers, Shoes_Strapped |
+| Demolisseur | Base.Sledgehammer | Bag_BigHikingBag | Jacket_Black, Trousers, Shoes_ArmyBoots |
+| Invincible | Base.AssaultRifle | Bag_ALICEpack_Army | Hat_RiotHelmet, Jacket_CoatArmy, Trousers, Shoes_ArmyBoots |
+| Mule | -- | Bag_ALICEpack_Army | Hat_Army, Jacket_CoatArmy, Trousers, Shoes_ArmyBoots |
+| Civil | -- | Bag_Schoolbag | Hoodie, Trousers, Shoes_Black |
+
+### G. Perks utilises (tous confirmes en B41)
 
 - `Perks.Electrical` -- confirme
 - `Perks.Mechanics` -- confirme
@@ -1248,38 +1356,45 @@ de melee sont par type d'arme: Axe, Blunt, etc.).
 - `media/lua/server/EscapadeExpressServer.lua`:
   - Etendre `ROLE_ORDER` (ligne 55)
   - Etendre `ROLE_NAMES` (ligne 56-61)
-  - Etendre `ROLE_DEFS` (ligne 67-149) avec les 12 nouveaux roles
+  - Etendre `ROLE_DEFS` (ligne 67-149) avec les 13 nouveaux roles
+  - Ajouter champ `equipped` dans chaque ROLE_DEFS (arme principale, sac, vetements)
   - Ajouter bloc `stats` dans `applyRole` (apres ligne 296)
   - Ajouter gestion `fatigue` dans le bloc stats
+  - Ajouter bloc `equipped` dans `applyRole` (apres ajout des items, avant stats)
 - `media/lua/client/EscapadeExpressUI.lua`:
   - Etendre `roleNames` (ligne 84-89)
 - `media/lua/client/EscapadeExpressRolePicker.lua`:
-  - Etendre `ROLE_ORDER` (ligne 8)
-  - Etendre `ROLE_INFO` (ligne 9-30) avec les 12 nouveaux roles
-  - Reduire `rowHeight` (ligne 104) de 92 a 65
-  - Ajuster `height` dans `open()` (ligne 249) pour 16 roles
-  - Ajouter scroll si necessaire
+  - Etendre `ROLE_ORDER` (ligne 8) avec les 12 nouveaux roles uniques + `civil`
+  - Etendre `ROLE_INFO` (ligne 9-30) avec les 12 nouveaux roles + Civil
+  - Passer le layout en grille 3 colonnes
+  - Reduire `rowHeight` (ligne 104) pour des cartes compactes
+  - Ajuster `width`/`height` dans `open()` pour afficher 17 cartes sans scroll
 - `media/lua/client/LastStand/EscapadeExpress.lua`:
   - Etendre `ROLE_NAMES` (ligne 33-38)
   - Etendre `ROLE_DEFS` (ligne 40-118) avec les memes definitions que le serveur
-    (pour le fallback solo)
+    (pour le fallback solo, y compris le champ `equipped`)
 
 ## Critere d'acceptation
 
-1. Les 12 nouveaux roles sont jouables
+1. Les 12 nouveaux roles principaux sont jouables
 2. Chaque role a des skills, items et stats distincts
-3. L'assignation fonctionne jusqu'a 16 joueurs
-4. Les stats specifiques (endurance, panic, fatigue) s'appliquent au spawn
-5. L'UI affiche le nom correct des nouveaux roles
-6. Le role picker affiche les 16 roles sans debordement (scroll si necessaire)
-7. Tous les items utilises existent en B41 vanilla (verifies via pz-item-browser)
-8. Un 17e joueur+ recoit automatiquement le role Civil (fallback, pas de rejet)
-9. Le fallback solo fonctionne avec n'importe quel des 16 roles
+3. L'assignation fonctionne jusqu'a 16 roles uniques via le picker, avec Civil selectable en plus
+4. Les joueurs au-dela de 16 recoivent automatiquement le role Civil (pas de rejet)
+5. Les stats specifiques (endurance, panic, fatigue) s'appliquent au spawn
+6. L'UI affiche le nom correct des nouveaux roles
+7. Le role picker affiche les 17 cartes (16 roles uniques + Civil) sans debordement majeur
+8. Tous les items utilises existent en B41 vanilla (verifies via pz-item-browser)
+9. Le fallback solo fonctionne avec n'importe lequel des 17 roles, y compris Civil
 10. Le Demolisseur a beaucoup de grenades (PipeBomb x5, Aerosolbomb x5, Molotov x4, etc.)
 11. L'Invincible a tout au max (skills 7, M16 + Magnum + Katana, meilleures protections)
 12. La Mule a un gros sac + un bidon d'essence + de la nourriture pour le groupe
+13. Le Civil est selectionnable dans le picker et reste aussi un fallback automatique
+14. L'arme principale est automatiquement equipee en main droite au spawn
+15. Les vetements (casque, veste, pantalon, chaussures) sont automatiquement portes
+16. Le sac a dos est automatiquement equipe dans le slot dos
+17. L'equipement n'est applique qu'une seule fois (pas de duplication au rejoin)
 
-## Tableau recapitulatif des 16 roles
+## Tableau recapitulatif des 17 roles
 
 | Role | Style | Arme principale | Force | Faiblesse |
 |------|-------|-----------------|-------|-----------|
@@ -1306,11 +1421,11 @@ de melee sont par type d'arme: Axe, Blunt, etc.).
 - **EE-06 requis**: Le systeme de slots de EE-06 gere l'assignation pour
   >4 joueurs.
 - **EE-13 requis**: Le role picker UI est necessaire pour laisser le joueur
-  choisir parmi 16 roles.
+  choisir parmi 16 roles uniques + Civil.
 - **EE-11**: La definition des objets des roles existants (Soldat, Voleur,
   Local, Medic) doit etre validee avant l'implementation.
 
 ## Taille estimee
 
-Large (L) -- 12 nouvelles definitions de roles + stats specifiques + ajustement
+Large (L) -- 13 nouvelles definitions de roles + stats specifiques + ajustement
 UI picker avec scroll + verification des items (deja fait dans cette spec)

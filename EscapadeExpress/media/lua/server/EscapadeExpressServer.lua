@@ -51,17 +51,37 @@ local SHOPS = {
     {x = 11200, y = 8420, z = 0},
 }
 
--- Roles: slots fixes par ordre de priorite
-local ROLE_ORDER = {"soldat", "voleur", "local_", "medic"}
+-- Roles: 16 roles uniques pour les slots prioritaires, Civil restant
+-- selectionnable manuellement et attribuable en fallback automatique.
+local ROLE_ORDER = {
+    "soldat", "voleur", "local_", "medic",
+    "rambo", "sniper", "samourai", "geek",
+    "survivaliste", "pompier", "mecanicien", "athlete",
+    "eclaireur", "demolisseur", "invincible", "mule",
+}
+
 local ROLE_NAMES = {
     soldat = "Soldat",
     voleur = "Voleur",
     local_ = "Local",
     medic = "Medic",
+    rambo = "Rambo",
+    sniper = "Sniper",
+    samourai = "Samourai",
+    geek = "Geek",
+    survivaliste = "Survivaliste",
+    pompier = "Pompier",
+    mecanicien = "Mecanicien",
+    athlete = "Athlete",
+    eclaireur = "Eclaireur",
+    demolisseur = "Demolisseur",
+    invincible = "Invincible",
+    mule = "Mule",
+    civil = "Civil",
 }
 
 -- ============================================================
--- DEFINITION DES ROLES (items + skills)
+-- DEFINITION DES ROLES (items + skills + equipement + stats)
 -- ============================================================
 
 local ROLE_DEFS = {
@@ -84,6 +104,13 @@ local ROLE_DEFS = {
             {"Base.HoodieDOWN_WhiteTINT", 1},
             {"Base.Trousers", 1},
         },
+        equipped = {
+            primary = "Base.Pistol",
+            clothes = {
+                "Base.HoodieDOWN_WhiteTINT",
+                "Base.Trousers",
+            },
+        },
     },
     voleur = {
         name = "Voleur",
@@ -103,6 +130,14 @@ local ROLE_DEFS = {
             {"Base.HoodieDOWN_WhiteTINT", 1},
             {"Base.Trousers", 1},
             {"Base.Shoes_Black", 1},
+        },
+        equipped = {
+            primary = "Base.Crowbar",
+            clothes = {
+                "Base.HoodieDOWN_WhiteTINT",
+                "Base.Trousers",
+                "Base.Shoes_Black",
+            },
         },
     },
     local_ = {
@@ -125,6 +160,10 @@ local ROLE_DEFS = {
             {"Base.Bag_NormalHikingBag", 1},
             {"Base.Map", 1},
         },
+        equipped = {
+            primary = "Base.Hammer",
+            bag = "Base.Bag_NormalHikingBag",
+        },
     },
     medic = {
         name = "Medic",
@@ -145,6 +184,555 @@ local ROLE_DEFS = {
             {"Base.Trousers", 1},
             {"Base.Shoes_Black", 1},
         },
+        equipped = {
+            bag = "Base.Bag_DuffelBag",
+            clothes = {
+                "Base.Trousers",
+                "Base.Shoes_Black",
+            },
+        },
+    },
+    rambo = {
+        name = "Rambo",
+        skills = {
+            {Perks.Strength, 6},
+            {Perks.Fitness, 5},
+            {Perks.Axe, 5},
+            {Perks.Sneak, 0},
+            {Perks.Lightfoot, 0},
+            {Perks.Reloading, 1},
+            {Perks.Aiming, 1},
+        },
+        items = {
+            {"Base.Axe", 1},
+            {"Base.KitchenKnife", 2},
+            {"Base.Bandage", 4},
+            {"Base.WaterBottleFull", 1},
+            {"Base.Bag_NormalHikingBag", 1},
+            {"Base.Jacket_Black", 1},
+            {"Base.Trousers", 1},
+            {"Base.Shoes_Black", 1},
+            {"Base.Torch", 1},
+            {"Base.Battery", 1},
+        },
+        equipped = {
+            primary = "Base.Axe",
+            bag = "Base.Bag_NormalHikingBag",
+            clothes = {
+                "Base.Jacket_Black",
+                "Base.Trousers",
+                "Base.Shoes_Black",
+            },
+        },
+        stats = { endurance = 0.7, panic = 10 },
+    },
+    sniper = {
+        name = "Sniper",
+        skills = {
+            {Perks.Aiming, 7},
+            {Perks.Reloading, 5},
+            {Perks.Sneak, 4},
+            {Perks.Lightfoot, 4},
+            {Perks.Strength, 2},
+            {Perks.Fitness, 2},
+        },
+        items = {
+            {"Base.HuntingRifle", 1},
+            {"Base.308Clip", 1},
+            {"Base.308Bullets", 20},
+            {"Base.x4Scope", 1},
+            {"Base.HuntingKnife", 1},
+            {"Base.Bandage", 2},
+            {"Base.WaterBottleFull", 1},
+            {"Base.Bag_NormalHikingBag", 1},
+            {"Base.Jacket_ArmyCamoGreen", 1},
+            {"Base.Trousers", 1},
+            {"Base.Shoes_Black", 1},
+            {"Base.Torch", 1},
+            {"Base.Battery", 1},
+        },
+        equipped = {
+            primary = "Base.HuntingRifle",
+            bag = "Base.Bag_NormalHikingBag",
+            clothes = {
+                "Base.Jacket_ArmyCamoGreen",
+                "Base.Trousers",
+                "Base.Shoes_Black",
+            },
+        },
+        stats = { panic = 20 },
+    },
+    samourai = {
+        name = "Samourai",
+        skills = {
+            {Perks.Fitness, 5},
+            {Perks.Strength, 4},
+            {Perks.Nimble, 5},
+            {Perks.Sneak, 3},
+            {Perks.Lightfoot, 3},
+        },
+        items = {
+            {"Base.Katana", 1},
+            {"Base.KitchenKnife", 2},
+            {"Base.Bandage", 3},
+            {"Base.WaterBottleFull", 1},
+            {"Base.Bag_NormalHikingBag", 1},
+            {"Base.HoodieDOWN_WhiteTINT", 1},
+            {"Base.Trousers", 1},
+            {"Base.Shoes_Black", 1},
+            {"Base.Torch", 1},
+            {"Base.Battery", 1},
+        },
+        equipped = {
+            primary = "Base.Katana",
+            bag = "Base.Bag_NormalHikingBag",
+            clothes = {
+                "Base.HoodieDOWN_WhiteTINT",
+                "Base.Trousers",
+                "Base.Shoes_Black",
+            },
+        },
+        stats = { endurance = 0.5, panic = 15 },
+    },
+    geek = {
+        name = "Geek",
+        skills = {
+            {Perks.Electrical, 6},
+            {Perks.Mechanics, 5},
+            {Perks.Nimble, 3},
+            {Perks.Strength, 2},
+            {Perks.Fitness, 2},
+            {Perks.Aiming, 1},
+            {Perks.Reloading, 1},
+            {Perks.Sneak, 3},
+        },
+        items = {
+            {"Base.Screwdriver", 1},
+            {"Base.Wrench", 1},
+            {"Base.ElectronicsScrap", 5},
+            {"Base.ScrapMetal", 3},
+            {"Base.Wire", 2},
+            {"Base.LightBulb", 2},
+            {"Base.DuctTape", 2},
+            {"Base.ElectronicsMag1", 1},
+            {"Base.ElectronicsMag2", 1},
+            {"Base.BookMechanic1", 1},
+            {"Base.Bandage", 2},
+            {"Base.WaterBottleFull", 1},
+            {"Base.Bag_Schoolbag", 1},
+            {"Base.HoodieDOWN_WhiteTINT", 1},
+            {"Base.Trousers", 1},
+            {"Base.Shoes_Black", 1},
+            {"Base.Torch", 1},
+            {"Base.Battery", 3},
+        },
+        equipped = {
+            primary = "Base.Screwdriver",
+            bag = "Base.Bag_Schoolbag",
+            clothes = {
+                "Base.HoodieDOWN_WhiteTINT",
+                "Base.Trousers",
+                "Base.Shoes_Black",
+            },
+        },
+        stats = { panic = 40, fatigue = 0.1 },
+    },
+    survivaliste = {
+        name = "Survivaliste",
+        skills = {
+            {Perks.PlantScavenging, 5},
+            {Perks.Trapping, 4},
+            {Perks.Fishing, 3},
+            {Perks.Carpentry, 4},
+            {Perks.Cooking, 3},
+            {Perks.Fitness, 4},
+            {Perks.Strength, 4},
+            {Perks.Sneak, 2},
+            {Perks.Lightfoot, 2},
+            {Perks.Aiming, 2},
+            {Perks.Reloading, 2},
+        },
+        items = {
+            {"Base.HandAxe", 1},
+            {"Base.HuntingKnife", 1},
+            {"Base.Matches", 1},
+            {"Base.Lighter", 1},
+            {"camping.CampfireKit", 1},
+            {"camping.SteelAndFlint", 1},
+            {"camping.CampingTentKit", 1},
+            {"Base.CannedCornedBeef", 2},
+            {"Base.TinnedSoup", 2},
+            {"Base.Crackers", 2},
+            {"Base.GranolaBar", 2},
+            {"Base.Peanuts", 2},
+            {"Base.WaterBottleFull", 2},
+            {"Base.TinOpener", 1},
+            {"Base.Bandage", 3},
+            {"Base.Splint", 1},
+            {"Base.AlcoholWipes", 2},
+            {"Base.Bag_SurvivorBag", 1},
+            {"Base.Jacket_CoatArmy", 1},
+            {"Base.Trousers", 1},
+            {"Base.Shoes_Strapped", 1},
+            {"Base.Torch", 1},
+            {"Base.Battery", 2},
+            {"Base.BookTrapping1", 1},
+            {"Base.BookFishing1", 1},
+            {"Base.Rope", 1},
+            {"Base.DuctTape", 1},
+        },
+        equipped = {
+            primary = "Base.HandAxe",
+            bag = "Base.Bag_SurvivorBag",
+            clothes = {
+                "Base.Jacket_CoatArmy",
+                "Base.Trousers",
+                "Base.Shoes_Strapped",
+            },
+        },
+        stats = { panic = 15, endurance = 0.4 },
+    },
+    pompier = {
+        name = "Pompier",
+        skills = {
+            {Perks.Fitness, 5},
+            {Perks.Strength, 5},
+            {Perks.Axe, 4},
+            {Perks.Doctor, 2},
+            {Perks.Nimble, 3},
+            {Perks.Aiming, 2},
+            {Perks.Reloading, 2},
+            {Perks.Sneak, 1},
+            {Perks.Lightfoot, 1},
+        },
+        items = {
+            {"Base.Axe", 1},
+            {"Base.Extinguisher", 1},
+            {"Base.Hat_Fireman", 1},
+            {"Base.Jacket_Fireman", 1},
+            {"Base.Trousers_Fireman", 1},
+            {"Base.Shoes_ArmyBoots", 1},
+            {"Base.Bandage", 4},
+            {"Base.AlcoholWipes", 2},
+            {"Base.Splint", 1},
+            {"Base.WaterBottleFull", 2},
+            {"Base.Bag_NormalHikingBag", 1},
+            {"Base.Torch", 1},
+            {"Base.Battery", 2},
+            {"Base.Hammer", 1},
+            {"Base.Crowbar", 1},
+        },
+        equipped = {
+            primary = "Base.Axe",
+            bag = "Base.Bag_NormalHikingBag",
+            clothes = {
+                "Base.Hat_Fireman",
+                "Base.Jacket_Fireman",
+                "Base.Trousers_Fireman",
+                "Base.Shoes_ArmyBoots",
+            },
+        },
+        stats = { panic = 15, endurance = 0.6 },
+    },
+    mecanicien = {
+        name = "Mecanicien",
+        skills = {
+            {Perks.Mechanics, 7},
+            {Perks.Electrical, 3},
+            {Perks.Carpentry, 2},
+            {Perks.Fitness, 3},
+            {Perks.Strength, 4},
+            {Perks.Aiming, 2},
+            {Perks.Reloading, 2},
+            {Perks.Sneak, 2},
+            {Perks.Lightfoot, 2},
+        },
+        items = {
+            {"Base.Wrench", 1},
+            {"Base.LugWrench", 1},
+            {"Base.TirePump", 1},
+            {"Base.BlowTorch", 1},
+            {"Base.PropaneTank", 1},
+            {"Base.Screwdriver", 1},
+            {"Base.Hammer", 1},
+            {"Base.DuctTape", 2},
+            {"Base.ScrapMetal", 3},
+            {"Base.Wire", 2},
+            {"Base.BookMechanic1", 1},
+            {"Base.Bandage", 2},
+            {"Base.WaterBottleFull", 1},
+            {"Base.Bag_NormalHikingBag", 1},
+            {"Base.Jacket_Black", 1},
+            {"Base.Trousers", 1},
+            {"Base.Shoes_ArmyBoots", 1},
+            {"Base.Torch", 1},
+            {"Base.Battery", 2},
+        },
+        equipped = {
+            primary = "Base.Wrench",
+            bag = "Base.Bag_NormalHikingBag",
+            clothes = {
+                "Base.Jacket_Black",
+                "Base.Trousers",
+                "Base.Shoes_ArmyBoots",
+            },
+        },
+        stats = { panic = 25, fatigue = 0.05 },
+    },
+    athlete = {
+        name = "Athlete",
+        skills = {
+            {Perks.Fitness, 7},
+            {Perks.Strength, 3},
+            {Perks.Nimble, 5},
+            {Perks.Lightfoot, 4},
+            {Perks.Sneak, 3},
+            {Perks.Aiming, 2},
+            {Perks.Reloading, 2},
+        },
+        items = {
+            {"Base.KitchenKnife", 1},
+            {"Base.Bandage", 2},
+            {"Base.WaterBottleFull", 2},
+            {"Base.GranolaBar", 3},
+            {"Base.PillsVitamins", 1},
+            {"Base.Bag_NormalHikingBag", 1},
+            {"Base.HoodieDOWN_WhiteTINT", 1},
+            {"Base.Trousers", 1},
+            {"Base.Shoes_BlueTrainers", 1},
+            {"Base.Torch", 1},
+            {"Base.Battery", 1},
+        },
+        equipped = {
+            primary = "Base.KitchenKnife",
+            bag = "Base.Bag_NormalHikingBag",
+            clothes = {
+                "Base.HoodieDOWN_WhiteTINT",
+                "Base.Trousers",
+                "Base.Shoes_BlueTrainers",
+            },
+        },
+        stats = { endurance = 0.85, panic = 20, fatigue = 0 },
+    },
+    eclaireur = {
+        name = "Eclaireur",
+        skills = {
+            {Perks.Sneak, 5},
+            {Perks.Lightfoot, 5},
+            {Perks.Nimble, 4},
+            {Perks.PlantScavenging, 4},
+            {Perks.Fitness, 4},
+            {Perks.Strength, 3},
+            {Perks.Aiming, 3},
+            {Perks.Reloading, 3},
+            {Perks.Carpentry, 2},
+        },
+        items = {
+            {"Base.Machete", 1},
+            {"Base.Map", 1},
+            {"Base.x4Scope", 1},
+            {"Base.Torch", 1},
+            {"Base.Battery", 2},
+            {"Base.Bandage", 2},
+            {"Base.WaterBottleFull", 1},
+            {"Base.GranolaBar", 2},
+            {"Base.Bag_NormalHikingBag", 1},
+            {"Base.Jacket_ArmyCamoDesert", 1},
+            {"Base.Trousers", 1},
+            {"Base.Shoes_Strapped", 1},
+            {"Base.Lighter", 1},
+            {"Base.Rope", 1},
+        },
+        equipped = {
+            primary = "Base.Machete",
+            bag = "Base.Bag_NormalHikingBag",
+            clothes = {
+                "Base.Jacket_ArmyCamoDesert",
+                "Base.Trousers",
+                "Base.Shoes_Strapped",
+            },
+        },
+        stats = { endurance = 0.5, panic = 15 },
+    },
+    demolisseur = {
+        name = "Demolisseur",
+        skills = {
+            {Perks.Electrical, 4},
+            {Perks.Mechanics, 4},
+            {Perks.Strength, 4},
+            {Perks.Fitness, 3},
+            {Perks.Aiming, 3},
+            {Perks.Reloading, 3},
+            {Perks.Sneak, 1},
+            {Perks.Lightfoot, 1},
+        },
+        items = {
+            {"Base.PipeBomb", 5},
+            {"Base.PipeBombTriggered", 3},
+            {"Base.Aerosolbomb", 5},
+            {"Base.AerosolbombTriggered", 3},
+            {"Base.Molotov", 4},
+            {"Base.SmokeBomb", 3},
+            {"Base.Sledgehammer", 1},
+            {"Base.DuctTape", 2},
+            {"Base.ScrapMetal", 3},
+            {"Base.Wire", 2},
+            {"Base.ElectronicsScrap", 3},
+            {"Base.PropaneTank", 1},
+            {"Base.Bandage", 3},
+            {"Base.WaterBottleFull", 1},
+            {"Base.Bag_BigHikingBag", 1},
+            {"Base.Jacket_Black", 1},
+            {"Base.Trousers", 1},
+            {"Base.Shoes_ArmyBoots", 1},
+            {"Base.Torch", 1},
+            {"Base.Battery", 2},
+            {"Base.Lighter", 1},
+        },
+        equipped = {
+            primary = "Base.Sledgehammer",
+            bag = "Base.Bag_BigHikingBag",
+            clothes = {
+                "Base.Jacket_Black",
+                "Base.Trousers",
+                "Base.Shoes_ArmyBoots",
+            },
+        },
+        stats = { panic = 10, endurance = 0.4 },
+    },
+    invincible = {
+        name = "Invincible",
+        skills = {
+            {Perks.Aiming, 7},
+            {Perks.Reloading, 6},
+            {Perks.Strength, 7},
+            {Perks.Fitness, 7},
+            {Perks.Sneak, 5},
+            {Perks.Lightfoot, 5},
+            {Perks.Nimble, 5},
+            {Perks.Axe, 6},
+            {Perks.Doctor, 4},
+            {Perks.Carpentry, 4},
+            {Perks.Mechanics, 4},
+            {Perks.Electrical, 4},
+            {Perks.Cooking, 3},
+            {Perks.PlantScavenging, 3},
+        },
+        items = {
+            {"Base.AssaultRifle", 1},
+            {"Base.556Clip", 3},
+            {"Base.556Bullets", 60},
+            {"Base.Revolver_Long", 1},
+            {"Base.Bullets44", 24},
+            {"Base.44Clip", 2},
+            {"Base.Katana", 1},
+            {"Base.Sledgehammer", 1},
+            {"Base.Hat_RiotHelmet", 1},
+            {"Base.Jacket_CoatArmy", 1},
+            {"Base.Trousers", 1},
+            {"Base.Shoes_ArmyBoots", 1},
+            {"Base.Bandage", 5},
+            {"Base.AlcoholWipes", 3},
+            {"Base.Splint", 2},
+            {"Base.Pills", 2},
+            {"Base.PillsBeta", 1},
+            {"Base.PillsVitamins", 1},
+            {"Base.Antibiotics", 1},
+            {"Base.WaterBottleFull", 2},
+            {"Base.Bag_ALICEpack_Army", 1},
+            {"Base.Torch", 1},
+            {"Base.Battery", 3},
+            {"Base.DuctTape", 2},
+            {"Base.Rope", 1},
+        },
+        equipped = {
+            primary = "Base.AssaultRifle",
+            bag = "Base.Bag_ALICEpack_Army",
+            clothes = {
+                "Base.Hat_RiotHelmet",
+                "Base.Jacket_CoatArmy",
+                "Base.Trousers",
+                "Base.Shoes_ArmyBoots",
+            },
+        },
+        stats = { endurance = 0.8, panic = 5, fatigue = 0 },
+    },
+    mule = {
+        name = "Mule",
+        skills = {
+            {Perks.Strength, 7},
+            {Perks.Fitness, 5},
+            {Perks.Carpentry, 2},
+            {Perks.Aiming, 1},
+            {Perks.Reloading, 1},
+            {Perks.Sneak, 2},
+            {Perks.Lightfoot, 2},
+            {Perks.Nimble, 3},
+        },
+        items = {
+            {"Base.Bag_ALICEpack_Army", 1},
+            {"Base.Bag_DuffelBag", 1},
+            {"Base.Crowbar", 1},
+            {"Base.Bandage", 3},
+            {"Base.WaterBottleFull", 2},
+            {"Base.TinnedBeans", 3},
+            {"Base.TinnedSoup", 3},
+            {"Base.TinOpener", 1},
+            {"Base.PetrolCan", 1},
+            {"Base.Hat_Army", 1},
+            {"Base.Jacket_CoatArmy", 1},
+            {"Base.Trousers", 1},
+            {"Base.Shoes_ArmyBoots", 1},
+            {"Base.Torch", 1},
+            {"Base.Battery", 2},
+            {"Base.DuctTape", 2},
+            {"Base.Rope", 1},
+        },
+        equipped = {
+            primary = "Base.Crowbar",
+            bag = "Base.Bag_ALICEpack_Army",
+            clothes = {
+                "Base.Hat_Army",
+                "Base.Jacket_CoatArmy",
+                "Base.Trousers",
+                "Base.Shoes_ArmyBoots",
+            },
+        },
+        stats = { endurance = 0.5, panic = 25 },
+    },
+    civil = {
+        name = "Civil",
+        skills = {
+            {Perks.Fitness, 1},
+            {Perks.Strength, 1},
+            {Perks.Sneak, 1},
+            {Perks.Lightfoot, 1},
+            {Perks.Nimble, 1},
+            {Perks.Aiming, 0},
+            {Perks.Reloading, 0},
+        },
+        items = {
+            {"Base.KitchenKnife", 1},
+            {"Base.Bandage", 1},
+            {"Base.WaterBottleFull", 1},
+            {"Base.GranolaBar", 1},
+            {"Base.Bag_Schoolbag", 1},
+            {"Base.HoodieDOWN_WhiteTINT", 1},
+            {"Base.Trousers", 1},
+            {"Base.Shoes_Black", 1},
+            {"Base.Torch", 1},
+            {"Base.Battery", 1},
+        },
+        equipped = {
+            primary = "Base.KitchenKnife",
+            bag = "Base.Bag_Schoolbag",
+            clothes = {
+                "Base.HoodieDOWN_WhiteTINT",
+                "Base.Trousers",
+                "Base.Shoes_Black",
+            },
+        },
+        stats = { panic = 50, endurance = 0.2, fatigue = 0.15 },
     },
 }
 
@@ -167,6 +755,89 @@ local function broadcastAlert(text, alertType)
     })
 end
 
+local function isRoleSelectable(roleKey)
+    if roleKey == "civil" then
+        return true
+    end
+
+    for _, selectableRole in ipairs(ROLE_ORDER) do
+        if selectableRole == roleKey then
+            return true
+        end
+    end
+    return false
+end
+
+local function equipRoleItems(player, inv, equipped)
+    if player == nil or inv == nil or equipped == nil then return end
+
+    if equipped.primary then
+        local primary = inv:FindAndReturn(equipped.primary)
+        if primary then
+            player:setPrimaryHandItem(primary)
+        end
+    end
+
+    if equipped.secondary then
+        local secondary = inv:FindAndReturn(equipped.secondary)
+        if secondary then
+            player:setSecondaryHandItem(secondary)
+        end
+    end
+
+    if equipped.bag then
+        local bag = inv:FindAndReturn(equipped.bag)
+        if bag then
+            player:setClothingItem_Back(bag)
+        end
+    end
+
+    if equipped.clothes then
+        for _, clothId in ipairs(equipped.clothes) do
+            local cloth = inv:FindAndReturn(clothId)
+            if cloth and cloth:getBodyLocation() ~= nil then
+                player:setWornItem(cloth:getBodyLocation(), cloth)
+            end
+        end
+    end
+end
+
+local function applyRoleStats(player, stats)
+    local playerStats = player:getStats()
+    playerStats:setPanic(30)
+    playerStats:setHunger(0.2)
+    playerStats:setThirst(0.2)
+    playerStats:setFatigue(0)
+
+    if stats == nil then return end
+
+    if stats.endurance ~= nil then
+        playerStats:setEndurance(stats.endurance)
+    end
+    if stats.panic ~= nil then
+        playerStats:setPanic(stats.panic)
+    end
+    if stats.fatigue ~= nil then
+        playerStats:setFatigue(stats.fatigue)
+    end
+    if stats.hunger ~= nil then
+        playerStats:setHunger(stats.hunger)
+    end
+    if stats.thirst ~= nil then
+        playerStats:setThirst(stats.thirst)
+    end
+end
+
+local function grantCivilRole(player)
+    local username = player and player:getUsername() or nil
+    if username ~= nil then
+        Server.playerSlots[username] = "civil"
+        Server.selectionConfirmed[username] = "civil"
+        Server.selectionDenied[username] = nil
+    end
+    return "civil"
+end
+
 -- ============================================================
 -- ASSIGNATION ET APPLICATION DES ROLES
 -- ============================================================
@@ -178,7 +849,7 @@ end
 
 local function isRoleTaken(roleKey, exceptUsername)
     for username, takenRole in pairs(Server.playerSlots) do
-        if username ~= exceptUsername and takenRole == roleKey then
+        if takenRole ~= "civil" and username ~= exceptUsername and takenRole == roleKey then
             return true, username
         end
     end
@@ -207,6 +878,11 @@ local function buildRolePickerState()
             takenBy = username,
         }
     end
+
+    result.civil = {
+        taken = false,
+        takenBy = nil,
+    }
 
     return result
 end
@@ -290,10 +966,8 @@ local function applyRole(player, roleKey)
         player:getXp():setXPToLevel(perk, level)
     end
 
-    player:getStats():setPanic(30)
-    player:getStats():setHunger(0.2)
-    player:getStats():setThirst(0.2)
-    player:getStats():setFatigue(0)
+    equipRoleItems(player, inv, def.equipped)
+    applyRoleStats(player, def.stats)
 
     if username ~= nil then
         Server.roleLoadouts[username] = roleKey
@@ -719,15 +1393,18 @@ local function onClientCommand(module, command, player, data)
         end
 
         if not hasFreeRole(username) then
-            local modData = player:getModData()
-            modData.EE_role = nil
-            modData.EE_reviveEnabled = false
-            markSelectionDenied(username)
+            local fallbackRole = grantCivilRole(player)
+            local loadoutGranted = applyRole(player, fallbackRole)
+            if loadoutGranted then
+                print("[EE] Fallback Civil assigne: " .. tostring(username))
+            else
+                print("[EE] Fallback Civil resynchronise: " .. tostring(username))
+            end
 
-            print("[EE] Aucun role disponible pour " .. tostring(username) .. " (scenario limite a 4 joueurs)")
-            sendServerCommand("EscapadeExpress", "RoleDenied", {
+            sendServerCommand("EscapadeExpress", "RoleAssigned", {
                 username = username,
-                text = "Trop de joueurs pour ce scenario!"
+                role = fallbackRole,
+                roleName = ROLE_NAMES[fallbackRole] or fallbackRole
             })
 
             if Server.gameStarted then
@@ -750,7 +1427,7 @@ local function onClientCommand(module, command, player, data)
         local username = player:getUsername()
         local roleKey = data and data.roleKey or nil
 
-        if roleKey == nil or ROLE_DEFS[roleKey] == nil then
+        if roleKey == nil or ROLE_DEFS[roleKey] == nil or not isRoleSelectable(roleKey) then
             sendServerCommand("EscapadeExpress", "RoleUnavailable", {
                 username = username,
                 roleKey = roleKey,
