@@ -76,12 +76,12 @@ local ROLE_DEFS = {
         },
         items = {
             {"Base.Pistol", 1},
-            {"Base.PistolMagazine", 2},
+            {"Base.9mmClip", 2},
             {"Base.Bullets9mm", 30},
             {"Base.Bandage", 3},
             {"Base.Torch", 1},
             {"Base.Battery", 2},
-            {"Base.HoodieDOWNBlackTINT", 1},
+            {"Base.HoodieDOWN_WhiteTINT", 1},
             {"Base.Trousers", 1},
         },
     },
@@ -100,7 +100,7 @@ local ROLE_DEFS = {
             {"Base.Bandage", 2},
             {"Base.Torch", 1},
             {"Base.Battery", 1},
-            {"Base.HoodieDOWNWhiteTINT", 1},
+            {"Base.HoodieDOWN_WhiteTINT", 1},
             {"Base.Trousers", 1},
             {"Base.Shoes_Black", 1},
         },
@@ -119,7 +119,7 @@ local ROLE_DEFS = {
             {"Base.Nails", 20},
             {"Base.Saw", 1},
             {"Base.WaterBottleFull", 2},
-            {"Base.CannedBeans", 2},
+            {"Base.TinnedBeans", 2},
             {"Base.TinOpener", 1},
             {"Base.Bandage", 2},
             {"Base.Bag_NormalHikingBag", 1},
@@ -136,8 +136,8 @@ local ROLE_DEFS = {
         },
         items = {
             {"Base.Bandage", 5},
-            {"Base.DisinfectantAlcohol", 2},
-            {"Base.Painkillers", 2},
+            {"Base.Disinfectant", 2},
+            {"Base.Pills", 2},
             {"Base.Antibiotics", 1},
             {"Base.Torch", 1},
             {"Base.Battery", 2},
@@ -345,7 +345,7 @@ local function spawnGasCan()
         return
     end
 
-    sq:SpawnWorldInventoryItem("Base.PetrolCan", 0.5, 0.5, 0.0)
+    sq:AddWorldInventoryItem("Base.PetrolCan", 0.5, 0.5, 0.0)
     Server.gasCanSpawned = true
     print("[EE] Bidon d'essence spawn (" .. GAS_CAN_LOCATION.x .. "," .. GAS_CAN_LOCATION.y .. ")")
 end
