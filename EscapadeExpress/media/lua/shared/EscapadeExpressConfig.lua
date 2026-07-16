@@ -15,11 +15,59 @@
 
 EE_Config = EE_Config or {}
 
--- PLACEHOLDER: remplacer par les coords reelles du spawn arriere-boutique
-EE_Config.spawn = {xcell = 37, ycell = 28, x = 120, y = 120, z = 0}
+function EE_Config.worldToCell(worldX, worldY)
+    local xcell = math.floor(worldX / 300)
+    local ycell = math.floor(worldY / 300)
+    local x = worldX - (xcell * 300)
+    local y = worldY - (ycell * 300)
+    return xcell, ycell, x, y
+end
 
--- PLACEHOLDER: remplacer par les coords reelles du parking du mall
-EE_Config.parking = {x = 11250, y = 8550, z = 0}
+function EE_Config.cellToWorld(xcell, ycell, x, y)
+    return xcell * 300 + x, ycell * 300 + y
+end
+
+function EE_Config.worldPointToCellPoint(worldX, worldY, worldZ)
+    local xcell, ycell, x, y = EE_Config.worldToCell(worldX, worldY)
+    return {
+        xcell = xcell,
+        ycell = ycell,
+        x = x,
+        y = y,
+        z = worldZ or 0,
+    }
+end
+
+function EE_Config.worldRectToCellSpawns(x1, y1, x2, y2, z)
+    local minX = math.min(x1, x2)
+    local maxX = math.max(x1, x2)
+    local minY = math.min(y1, y2)
+    local maxY = math.max(y1, y2)
+    local spawns = {}
+
+    for y = minY, maxY do
+        for x = minX, maxX do
+            spawns[#spawns + 1] = EE_Config.worldPointToCellPoint(x, y, z)
+        end
+    end
+
+    return spawns
+end
+
+-- Spawn valide releve en jeu: rectangle interieur du mall.
+-- `spawn` sert d'ancre/metadata; `spawnTiles` couvre toute la zone jouable.
+EE_Config.spawnArea = {x1 = 11356, y1 = 8946, x2 = 11360, y2 = 8944, z = 0}
+EE_Config.spawn = EE_Config.worldPointToCellPoint(11358, 8945, 0)
+EE_Config.spawnTiles = EE_Config.worldRectToCellSpawns(
+    EE_Config.spawnArea.x1,
+    EE_Config.spawnArea.y1,
+    EE_Config.spawnArea.x2,
+    EE_Config.spawnArea.y2,
+    EE_Config.spawnArea.z
+)
+
+-- Parking valide releve en jeu
+EE_Config.parking = {x = 11189, y = 8739, z = 0}
 
 -- PLACEHOLDER: remplacer par les coords reelles du point de respawn
 EE_Config.respawn = {x = 11220, y = 8520, z = 0}
@@ -39,21 +87,9 @@ EE_Config.shops = {
     {x = 11200, y = 8420, z = 0},
 }
 
--- PLACEHOLDER: remplacer par la vraie position du bidon d'essence
-EE_Config.gasCan = {x = 11170, y = 8490, z = 0}
+-- Bidon d'essence valide releve en jeu
+EE_Config.gasCan = {x = 11174, y = 8432, z = 4}
 
 -- PLACEHOLDER: remplacer par le vrai centre de la zone de coupure electrique
 EE_Config.powerOutageCenter = {x = 11200, y = 8450, z = 0}
 EE_Config.powerOutageRadius = 100
-
-function EE_Config.worldToCell(worldX, worldY)
-    local xcell = math.floor(worldX / 300)
-    local ycell = math.floor(worldY / 300)
-    local x = worldX - (xcell * 300)
-    local y = worldY - (ycell * 300)
-    return xcell, ycell, x, y
-end
-
-function EE_Config.cellToWorld(xcell, ycell, x, y)
-    return xcell * 300 + x, ycell * 300 + y
-end

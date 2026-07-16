@@ -15,6 +15,7 @@ EscapadeExpress = {}
 -- ============================================================
 
 local SPAWN = EE_Config.spawn
+local SPAWN_TILES = EE_Config.spawnTiles or {SPAWN}
 
 -- ============================================================
 -- CONSTANTES DU SCENARIO
@@ -1023,8 +1024,8 @@ EscapadeExpress.Render = function() end
 -- 5. SPAWN
 -- ============================================================
 
-EscapadeExpress.spawns = {SPAWN}
-local spawn = EscapadeExpress.spawns[1]
+EscapadeExpress.spawns = SPAWN_TILES
+local spawn = EscapadeExpress.spawns[1] or SPAWN
 
 -- ============================================================
 -- 6. METADATA
