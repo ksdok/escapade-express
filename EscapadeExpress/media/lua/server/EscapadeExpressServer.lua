@@ -13,6 +13,11 @@ local Server = {
     selectionDenied = {},
     scenarioPrepared = false,
     escapeVehicle = nil,
+    vehicleStartDetected = false,
+    vehicleExploded = false,
+    vehicleExplodeTickDelay = nil,
+    vehicleExplodeTickCounter = 0,
+    vehicleExplosionTickActive = false,
     gameStarted = false,
     gasCanSpawned = false,
     startTime = nil,
@@ -44,6 +49,8 @@ local MALL_ENTRANCES = EE_Config.entrances
 local SHOPS = EE_Config.shops
 local POWER_OUTAGE_CENTER = EE_Config.powerOutageCenter
 local POWER_OUTAGE_RADIUS = EE_Config.powerOutageRadius
+
+local vehicleExplosionTick = nil
 
 -- Roles: 16 roles uniques pour les slots prioritaires, Civil restant
 -- selectionnable manuellement et attribuable en fallback automatique.
@@ -1036,6 +1043,71 @@ local function spawnEscapeVehicle()
     print("[EE] Vehicule d'escape spawn au parking (" .. PARKING_X .. "," .. PARKING_Y .. ")")
 end
 
+local function unregisterVehicleExplosionTick()
+    if not Server.vehicleExplosionTickActive or vehicleExplosionTick == nil then return end
+
+    Events.OnTick.Remove(vehicleExplosionTick)
+    Server.vehicleExplosionTickActive = false
+end
+
+local function explodeEscapeVehicle()
+    if Server.vehicleExploded then return false end
+
+    unregisterVehicleExplosionTick()
+    Server.vehicleExplodeTickDelay = nil
+    Server.vehicleExplodeTickCounter = 0
+
+    if Server.escapeVehicle == nil then
+        Server.vehicleExploded = true
+        print("[EE] WARNING: Aucun vehicule d'escape a faire exploser")
+        return false
+    end
+
+    local sq = Server.escapeVehicle:getSquare()
+    if sq == nil then
+        Server.vehicleExploded = true
+        print("[EE] WARNING: Impossible de trouver le square du vehicule d'escape")
+        return false
+    end
+
+    Server.vehicleExploded = true
+    IsoFireManager.explode(getCell(), sq, 50)
+    broadcastAlert("LE VEHICULE EXPLOSE!", "danger")
+    print("[EE] Vehicule d'escape explose")
+    return true
+end
+
+vehicleExplosionTick = function()
+    if Server.vehicleExploded or not Server.vehicleStartDetected or Server.vehicleExplodeTickDelay == nil then
+        unregisterVehicleExplosionTick()
+        return
+    end
+
+    Server.vehicleExplodeTickCounter = Server.vehicleExplodeTickCounter + 1
+    if Server.vehicleExplodeTickCounter >= Server.vehicleExplodeTickDelay then
+        explodeEscapeVehicle()
+    end
+end
+
+local function scheduleEscapeVehicleExplosion()
+    if Server.escapeVehicle == nil then return false end
+    if Server.vehicleStartDetected or Server.vehicleExploded then return false end
+
+    local delayTicks = ZombRand(120, 181)
+    Server.vehicleStartDetected = true
+    Server.vehicleExplodeTickDelay = delayTicks
+    Server.vehicleExplodeTickCounter = 0
+
+    if not Server.vehicleExplosionTickActive then
+        Events.OnTick.Add(vehicleExplosionTick)
+        Server.vehicleExplosionTickActive = true
+    end
+
+    broadcastAlert("Le moteur s'etouffe...", "warning")
+    print("[EE] Explosion du vehicule programmee dans " .. tostring(delayTicks) .. " ticks")
+    return true
+end
+
 -- ============================================================
 -- SPAWN DU BIDON D'ESSENCE
 -- ============================================================
@@ -1059,6 +1131,8 @@ end
 -- ============================================================
 
 local function resetScenarioState()
+    unregisterVehicleExplosionTick()
+
     Server.playerSlots = {}
     Server.roleLoadouts = {}
     Server.selectionRoster = {}
@@ -1066,6 +1140,11 @@ local function resetScenarioState()
     Server.selectionDenied = {}
     Server.scenarioPrepared = false
     Server.escapeVehicle = nil
+    Server.vehicleStartDetected = false
+    Server.vehicleExploded = false
+    Server.vehicleExplodeTickDelay = nil
+    Server.vehicleExplodeTickCounter = 0
+    Server.vehicleExplosionTickActive = false
     Server.gameStarted = false
     Server.gasCanSpawned = false
     Server.startTime = nil
@@ -1521,6 +1600,17 @@ local function onClientCommand(module, command, player, data)
             maybeStartScenarioTimer()
         end
 
+    elseif command == "VehicleStarted" then
+        if Server.escapeVehicle == nil or Server.vehicleStartDetected or Server.vehicleExploded then
+            return
+        end
+
+        local vehicle = player and player:getVehicle() or nil
+        if vehicle == nil or vehicle ~= Server.escapeVehicle then
+            return
+        end
+
+        scheduleEscapeVehicleExplosion()
     elseif command == "PlayerDown" then
         local downX = data and data.x or nil
         local downY = data and data.y or nil

@@ -16,6 +16,7 @@ EscapadeExpress = {}
 
 local SPAWN = EE_Config.spawn
 local SPAWN_TILES = EE_Config.spawnTiles or {SPAWN}
+local PARKING = EE_Config.parking
 
 -- ============================================================
 -- CONSTANTES DU SCENARIO
@@ -686,6 +687,12 @@ local timeWarningsShown = {}
 local runtimeHooksRegistered = false
 local soloPickerFallbackAt = nil
 local soloFallbackTickRegistered = false
+local engineStartReported = false
+local vehicleEngineApiWarningShown = false
+local soloVehicleExplosionVehicle = nil
+local soloVehicleExplosionTickDelay = nil
+local soloVehicleExplosionTickCounter = 0
+local soloVehicleExplosionTickRegistered = false
 
 local function isSinglePlayerRuntime()
     if isClient ~= nil then
@@ -898,6 +905,82 @@ end
 -- 2. HOOKS D'EVENEMENTS
 -- ============================================================
 
+local function isVehicleEngineStarted(vehicle)
+    if vehicle == nil then return false end
+
+    if vehicle.isEngineStarted ~= nil then
+        return vehicle:isEngineStarted()
+    end
+
+    if vehicle.isEngineRunning ~= nil then
+        return vehicle:isEngineRunning()
+    end
+
+    if not vehicleEngineApiWarningShown then
+        print("[EE] WARNING: aucune API etat moteur disponible sur BaseVehicle")
+        vehicleEngineApiWarningShown = true
+    end
+
+    return false
+end
+
+local function showLocalAlert(text, alertType)
+    if triggerEvent ~= nil then
+        triggerEvent("OnServerCommand", "EscapadeExpress", "AlertMessage", {
+            text = text,
+            type = alertType,
+        })
+        return
+    end
+
+    local pl = getPlayer()
+    if pl ~= nil then
+        pl:Say(text)
+    end
+end
+
+local function isLikelyEscapeVehicle(vehicle)
+    if vehicle == nil or vehicle.getSquare == nil then return false end
+
+    local sq = vehicle:getSquare()
+    if sq == nil then return false end
+
+    return sq:getZ() == PARKING.z
+        and math.abs(sq:getX() - PARKING.x) <= 4
+        and math.abs(sq:getY() - PARKING.y) <= 4
+end
+
+local function unregisterSoloVehicleExplosionTick()
+    if not soloVehicleExplosionTickRegistered then return end
+
+    Events.OnTick.Remove(EscapadeExpress.TickSoloVehicleExplosion)
+    soloVehicleExplosionTickRegistered = false
+end
+
+local function resetSoloVehicleExplosionState()
+    unregisterSoloVehicleExplosionTick()
+    soloVehicleExplosionVehicle = nil
+    soloVehicleExplosionTickDelay = nil
+    soloVehicleExplosionTickCounter = 0
+end
+
+local function ensureSoloVehicleExplosionTickRegistered()
+    if soloVehicleExplosionTickRegistered then return end
+
+    Events.OnTick.Add(EscapadeExpress.TickSoloVehicleExplosion)
+    soloVehicleExplosionTickRegistered = true
+end
+
+local function scheduleSoloVehicleExplosion(vehicle)
+    if vehicle == nil then return end
+
+    soloVehicleExplosionVehicle = vehicle
+    soloVehicleExplosionTickDelay = ZombRand(120, 181)
+    soloVehicleExplosionTickCounter = 0
+    ensureSoloVehicleExplosionTickRegistered()
+    showLocalAlert("Le moteur s'etouffe...", "warning")
+end
+
 local function registerRuntimeHooks()
     if runtimeHooksRegistered then return end
 
@@ -905,6 +988,7 @@ local function registerRuntimeHooks()
     Events.EveryOneMinute.Add(EscapadeExpress.EveryMinutes)
     Events.OnPlayerDeath.Add(EscapadeExpress.OnPlayerDeath)
     Events.OnCreatePlayer.Add(EscapadeExpress.OnCreatePlayer)
+    Events.OnPlayerUpdate.Add(EscapadeExpress.OnPlayerUpdate)
 end
 
 EscapadeExpress.OnGameStart = function()
@@ -938,6 +1022,8 @@ EscapadeExpress.OnNewGame = function()
         EE_gameOver = false
         timeWarningsShown = {}
         soloPickerFallbackAt = nil
+        engineStartReported = false
+        resetSoloVehicleExplosionState()
 
         pl:getModData().EE_reviveEnabled = true
         pl:getModData().EE_role = nil
@@ -1085,6 +1171,54 @@ end
 -- ============================================================
 -- 9. MORT DU JOUEUR (prevention cote client)
 -- ============================================================
+
+EscapadeExpress.TickSoloVehicleExplosion = function()
+    if soloVehicleExplosionVehicle == nil or soloVehicleExplosionTickDelay == nil then
+        resetSoloVehicleExplosionState()
+        return
+    end
+
+    soloVehicleExplosionTickCounter = soloVehicleExplosionTickCounter + 1
+    if soloVehicleExplosionTickCounter < soloVehicleExplosionTickDelay then
+        return
+    end
+
+    local vehicle = soloVehicleExplosionVehicle
+    resetSoloVehicleExplosionState()
+
+    local sq = vehicle and vehicle.getSquare and vehicle:getSquare() or nil
+    if sq == nil then
+        print("[EE] WARNING: impossible de trouver le square du vehicule solo a exploser")
+        return
+    end
+
+    IsoFireManager.explode(getCell(), sq, 50)
+    showLocalAlert("LE VEHICULE EXPLOSE!", "danger")
+end
+
+EscapadeExpress.OnPlayerUpdate = function(player)
+    if engineStartReported or EE_gameOver then return end
+    if player == nil then return end
+
+    local localPlayer = getPlayer()
+    if localPlayer == nil or player ~= localPlayer then return end
+
+    local vehicle = player:getVehicle()
+    if vehicle == nil or not isVehicleEngineStarted(vehicle) then return end
+
+    if isSinglePlayerRuntime() then
+        if not isLikelyEscapeVehicle(vehicle) then return end
+
+        engineStartReported = true
+        scheduleSoloVehicleExplosion(vehicle)
+        return
+    end
+
+    if sendClientCommand == nil then return end
+
+    engineStartReported = true
+    sendClientCommand("EscapadeExpress", "VehicleStarted", {})
+end
 
 EscapadeExpress.OnPlayerDeath = function(player)
     if player == nil then return end
