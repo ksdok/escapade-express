@@ -78,6 +78,8 @@ escapade-express/
     ├── README.md                                  # readme du mod (installation + test)
     └── media/
         └── lua/
+            ├── shared/                            # config partagée client/serveur
+            │   └── EscapadeExpressConfig.lua      # placeholders coords + helpers world<->cell
             ├── client/                            # code côté client
             │   ├── LastStand/
             │   │   ├── EscapadeExpress.lua        # scénario principal (spawn, registration, timer, death)
@@ -114,6 +116,16 @@ UI `ISPanel` custom ouverte post-spawn. Gère:
 - fermeture automatique sur `RoleAssigned` / `RoleDenied`
 - variante solo locale qui applique le rôle puis démarre le timer seulement après validation
 
+#### `shared/EscapadeExpressConfig.lua` — Config coords partagée
+
+Source unique des placeholders de coordonnées du mall pour le client et le serveur. Définit:
+
+- `EE_Config.spawn`, `parking`, `respawn`, `entrances`, `shops`, `gasCan`, `powerOutageCenter`, `powerOutageRadius`
+- `EE_Config.worldToCell(worldX, worldY)`
+- `EE_Config.cellToWorld(xcell, ycell, x, y)`
+
+Tous les ajustements debug du mall doivent maintenant passer par ce fichier.
+
 #### `client/EscapadeExpressShared.lua` — Helpers client
 
 Fonctions partagées entre les fichiers client, notamment `EE_getNowSeconds()` pour les timestamps UI et fallback.
@@ -132,7 +144,7 @@ Réception `AlertMessage` (events serveur), `RoleAssigned` (confirmation rôle),
 
 #### `server/EscapadeExpressServer.lua` — Logique serveur
 
-Autorité pour toutes les mécaniques sensibles en MP. Gère:
+Autorité pour toutes les mécaniques sensibles en MP. Gère, avec coords centralisées via `EE_Config`:
 
 - **Rôles choisis côté joueur** (EE-13): `OpenRolePicker`, `ChooseRole`, `RoleUnavailable`, `SyncRolePickerState`
 - **Slots de rôles**: `Server.playerSlots` par username, rejoin conservé, guard anti-duplication d'items via `Server.roleLoadouts`, refus des 5e+ joueurs avec `RoleDenied`
@@ -248,8 +260,8 @@ Voir `project-state.md` pour le backlog complet et `specs/` pour les spécificat
 | EE-05 | Logique de revive (medic/other/respawn) | ✅ |
 | EE-06 | Assignation des rôles (slots déterministes) | ✅ |
 | EE-07 | Synchro multi des events (autorité serveur) | ✅ |
-| EE-08 | Nettoyer les messages dupliqués | à faire |
-| EE-09 | Centraliser les placeholders de coords | à faire |
+| EE-08 | Nettoyer les messages dupliqués | ✅ |
+| EE-09 | Centraliser les placeholders de coords | ✅ |
 | EE-10 | Plan de test solo + LAN | ✅ |
 | EE-11 | Définir les objets de chaque rôle | à faire (validation) |
 | EE-12 | Nouveaux rôles: Rambo, Sniper, Samouraï | à faire |

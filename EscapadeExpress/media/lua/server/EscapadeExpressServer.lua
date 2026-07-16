@@ -3,6 +3,8 @@
 -- Role assignment, items/skills, revive, vehicule, power, fire
 -- ============================================================
 
+require "EscapadeExpressConfig"
+
 local Server = {
     playerSlots = {},
     roleLoadouts = {},
@@ -24,32 +26,24 @@ local Server = {
 -- CONSTANTES
 -- ============================================================
 
-local PARKING_X = 11250
-local PARKING_Y = 8550
-local PARKING_Z = 0
+local PARKING_X = EE_Config.parking.x
+local PARKING_Y = EE_Config.parking.y
+local PARKING_Z = EE_Config.parking.z
 
-local GAS_CAN_LOCATION = {x = 11170, y = 8490, z = 0}
-local RESPAWN_X = 11220  -- placeholder arriere-boutique, doit rester distinct du parking
-local RESPAWN_Y = 8520
-local RESPAWN_Z = 0
+local GAS_CAN_LOCATION = EE_Config.gasCan
+local RESPAWN_X = EE_Config.respawn.x
+local RESPAWN_Y = EE_Config.respawn.y
+local RESPAWN_Z = EE_Config.respawn.z
 
 local DURATION_HOURS = 3
 local POWER_OUTAGE_TIME = 0.75
 local FIRE_TIME = 2.0
 local FIRE_WARNING_TIME = 1.9
 
-local MALL_ENTRANCES = {
-    {x = 11200, y = 8400, z = 0},
-    {x = 11100, y = 8500, z = 0},
-    {x = 11300, y = 8450, z = 0},
-}
-
-local SHOPS = {
-    {x = 11180, y = 8430, z = 0},
-    {x = 11220, y = 8470, z = 0},
-    {x = 11150, y = 8460, z = 0},
-    {x = 11200, y = 8420, z = 0},
-}
+local MALL_ENTRANCES = EE_Config.entrances
+local SHOPS = EE_Config.shops
+local POWER_OUTAGE_CENTER = EE_Config.powerOutageCenter
+local POWER_OUTAGE_RADIUS = EE_Config.powerOutageRadius
 
 -- Roles: 16 roles uniques pour les slots prioritaires, Civil restant
 -- selectionnable manuellement et attribuable en fallback automatique.
@@ -639,6 +633,7 @@ local ROLE_DEFS = {
             {"Base.PillsVitamins", 1},
             {"Base.Antibiotics", 1},
             {"Base.WaterBottleFull", 2},
+            {"Base.Map", 1},
             {"Base.Bag_ALICEpack_Army", 1},
             {"Base.Torch", 1},
             {"Base.Battery", 3},
@@ -1112,9 +1107,9 @@ end
 local function cutPower()
     print("[EE] Coupure electrique!")
 
-    local centerX = 11200
-    local centerY = 8450
-    local radius = 100
+    local centerX = POWER_OUTAGE_CENTER.x
+    local centerY = POWER_OUTAGE_CENTER.y
+    local radius = POWER_OUTAGE_RADIUS
 
     for dx = -radius, radius do
         for dy = -radius, radius do

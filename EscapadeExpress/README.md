@@ -42,9 +42,14 @@ Elles DOIVENT etre ajustees en jeu avec le mode debug:
 3. Teleporter a la position souhaitee
 4. Lire les coordonnees (F3 ou console: `getPlayer():getX()`)
 5. Convertir: xcell = floor(x/300), x = x - (xcell*300)
-6. Modifier dans:
-   - `media/lua/client/LastStand/EscapadeExpress.lua` (SPAWN, PARKING, MALL_ENTRANCES, SHOPS, GAS_CAN_LOCATION)
-   - `media/lua/server/EscapadeExpressServer.lua` (PARKING_X/Y, GAS_CAN_LOCATION)
+6. Modifier uniquement `media/lua/shared/EscapadeExpressConfig.lua`
+   - spawn (`EE_Config.spawn`)
+   - parking (`EE_Config.parking`)
+   - respawn (`EE_Config.respawn`)
+   - entrees (`EE_Config.entrances`)
+   - boutiques (`EE_Config.shops`)
+   - bidon (`EE_Config.gasCan`)
+   - zone coupure elec (`EE_Config.powerOutageCenter`, `EE_Config.powerOutageRadius`)
 
 ## Structure
 
@@ -54,6 +59,8 @@ EscapadeExpress/
   poster.png
   media/
     lua/
+      shared/
+        EscapadeExpressConfig.lua   -- placeholders coords + helpers world<->cell
       client/
         LastStand/
           EscapadeExpress.lua        -- scenario principal (spawn, roles, events)

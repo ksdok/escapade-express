@@ -5,23 +5,17 @@
 -- ============================================================
 
 require "EscapadeExpressShared"
+require "EscapadeExpressConfig"
 
 EscapadeExpress = {}
 
 -- ============================================================
--- COORDONNEES (PLACEHOLDERS - a ajuster en jeu avec debug)
--- Cell 37x28 = world coords debut 11100, 8400
+-- COORDONNEES (source shared unique)
+-- Toutes les valeurs reelles/placeholders vivent dans EE_Config.
 -- ============================================================
 
-local SPAWN = {xcell = 37, ycell = 28, x = 120, y = 120, z = 0}
-
--- Parking du mall (placeholder)
-local PARKING_X = 11250
-local PARKING_Y = 8550
-local PARKING_Z = 0
-
--- Emplacement du bidon d'essence (placeholder, different du parking)
-local GAS_CAN_LOCATION = {x = 11170, y = 8490, z = 0}
+local SPAWN = EE_Config.spawn
+local SPAWN_TILES = EE_Config.spawnTiles or {SPAWN}
 
 -- ============================================================
 -- CONSTANTES DU SCENARIO
@@ -1030,8 +1024,8 @@ EscapadeExpress.Render = function() end
 -- 5. SPAWN
 -- ============================================================
 
-EscapadeExpress.spawns = {SPAWN}
-local spawn = EscapadeExpress.spawns[1]
+EscapadeExpress.spawns = SPAWN_TILES
+local spawn = EscapadeExpress.spawns[1] or SPAWN
 
 -- ============================================================
 -- 6. METADATA
