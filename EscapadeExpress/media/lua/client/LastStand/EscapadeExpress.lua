@@ -1145,7 +1145,7 @@ local function onServerCommand(module, command, data)
         end
     elseif command == "PlayerDown" then
         local pl = getPlayer()
-        if pl then
+        if pl and data and data.username and data.username ~= pl:getUsername() then
             pl:Say(data.username .. " est a terre! Allez le ranimer!")
         end
     elseif command == "PlayerRevived" then
