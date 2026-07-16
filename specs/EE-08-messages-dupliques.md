@@ -2,98 +2,75 @@
 
 ## Contexte
 
-Les messages du scenario sont affiches par deux canaux independants:
-1. `pl:Say("texte")` dans `EscapadeExpress.lua` -- bulle au-dessus du personnage
-2. `UI.addMessage("texte", color)` dans `EscapadeExpressUI.lua` -- message HUD temporaires
-3. `sendServerCommand("EscapadeExpress", "AlertMessage", {...})` -- message serveur -> UI
+Le projet a evolue depuis la premiere version de cette spec:
 
-## Doublons identifies
+- les evenements globaux du scenario (coupure elec, fumee, incendie, game over) sont maintenant emis cote serveur via `AlertMessage`
+- l'assignation de role est deja affichee uniquement dans le HUD (`EscapadeExpressUI.lua`)
+- le client garde surtout les `Say()` de roleplay local (intro, warnings temps, etat du joueur)
 
-### Doublon 1: Assignation de role
+Conclusion: la plupart des doublons historiques ont deja ete elimines par EE-07 et EE-13.
+Le cleanup EE-08 doit donc cibler les doublons encore reels dans le code actuel.
 
-- Client `onServerCommand RoleAssigned` (EscapadeExpress.lua ligne 311-312):
-  `pl:Say("Mon role: " .. data.roleName)`
-- UI `onServerCommand RoleAssigned` (EscapadeExpressUI.lua ligne 155-157):
-  `UI.addMessage("Role: " .. data.roleName, COLOR_GREEN)`
+## Doublon encore present
 
-Resultat: 2 messages pour le meme event (bulle + HUD).
+### PlayerDown (joueur a terre)
 
-### Doublon 2: Coupure electrique
+Flux actuel:
 
-- Client `EveryMinutes` (ligne 187):
-  `pl:Say("Coupure de courant! Les lumieres sont eteintes.")`
-- Serveur `cutPower()` (ligne 255-258):
-  `sendServerCommand("EscapadeExpress", "AlertMessage", {text="COUPURE DE COURANT!..."})`
+1. Le joueur qui tombe a terre declenche localement:
+   - `player:Say("Je suis a terre! Quelqu'un peut me ranimer!")`
+2. Le serveur broadcast ensuite `PlayerDown` a tous les clients
+3. Le client affiche aujourd'hui pour tout le monde:
+   - `pl:Say(data.username .. " est a terre! Allez le ranimer!")`
 
-Resultat: Le joueur voit la bulle + le message HUD + les autres joueurs voient
-aussi le message serveur. Trop de messages pour un seul event.
+Resultat:
+- les autres joueurs voient un message utile -> OK
+- le joueur a terre voit 2 messages pour le meme event:
+  - son message local `Je suis a terre...`
+  - puis son propre nom via le broadcast serveur
 
-### Doublon 3: Incendie
+## Regle cible
 
-- Client `EveryMinutes` (ligne 205):
-  `pl:Say("Un incendie! Le feu se propage!")`
-- Serveur `startFire()` (ligne 276-279):
-  `sendServerCommand("EscapadeExpress", "AlertMessage", {text="INCENDIE!..."})`
+- **Say() local**: conserve pour les messages roleplay du personnage local
+- **Broadcast serveur `PlayerDown`**: conserve pour informer les autres joueurs
+- **Pas de doublon pour le joueur concerne par l'evenement**
 
-### Doublon 4: Game over
+## Correction demandee
 
-- Client `EveryMinutes` (ligne 216):
-  `pl:Say("TEMPS ECOULE! Les zombies envahissent le mall!")`
-- Serveur `triggerGameOver()` (ligne 316-318):
-  `sendServerCommand("EscapadeExpress", "AlertMessage", {text="TEMPS ECOULE!..."})`
+### `media/lua/client/LastStand/EscapadeExpress.lua`
 
-### Doublon 5: PlayerDown
+Dans le handler `onServerCommand`, branche `PlayerDown`:
 
-- Client `OnPlayerDeath` (ligne 296):
-  `player:Say("Je suis a terre! Quelqu'un peut me ranimer!")`
-- Serveur `markPlayerDowned()` (ligne 372-374):
-  `sendServerCommand("EscapadeExpress", "PlayerDown", {username=...})`
-- Client `onServerCommand PlayerDown` (ligne 315-318):
-  `pl:Say(data.username .. " est a terre! Allez le ranimer!")`
+- garder le message broadcast pour les autres joueurs
+- ne rien afficher si `data.username == pl:getUsername()`
 
-Resultat: Le joueur a terre dit "Je suis a terre" + le serveur broadcast
-"X est a terre" + chaque client le dit aussi. 3 messages pour le meme event.
+Pseudo-regle:
 
-## Spec corrective
+```lua
+elseif command == "PlayerDown" then
+    local pl = getPlayer()
+    if pl and data and data.username and data.username ~= pl:getUsername() then
+        pl:Say(data.username .. " est a terre! Allez le ranimer!")
+    end
+end
+```
 
-### Regle: un canal par type de message
+## Hors scope
 
-- **Say()**: messages roleplay du personnage (intro, warnings temporels)
-- **AlertMessage (UI HUD)**: events globaux du scenario (coupure elec, incendie, game over)
-- **Pas de Say() sur un event qui a deja un AlertMessage serveur**
+Ne pas modifier dans EE-08:
 
-### Corrections
-
-1. **RoleAssigned**: Garder uniquement `UI.addMessage` (HUD). Retirer le `pl:Say`.
-2. **Coupure elec**: Retirer le `pl:Say` du client. Garder uniquement l'AlertMessage serveur.
-   Garder le `pl:playSound("LightbulbBurnedOut")` cote client.
-3. **Incendie**: Retirer le `pl:Say` du client. Garder l'AlertMessage serveur.
-   Garder le `pl:playSound("SmallExplosion")` cote client.
-4. **Game over**: Retirer le `pl:Say` du client. Garder l'AlertMessage serveur.
-5. **PlayerDown**: Garder le `pl:Say` du joueur a terre (roleplay). Retirer le
-   `pl:Say` des autres clients (deja couvert par l'AlertMessage). Ou inversement:
-   retirer le Say du joueur et garder uniquement le broadcast.
-
-## Fichiers a modifier
-
-- `media/lua/client/LastStand/EscapadeExpress.lua`:
-  - Retirer `pl:Say` aux lignes 187, 205, 216, 312
-  - Retirer (ou garder) le `pl:Say` ligne 296 et 318
-- `media/lua/client/EscapadeExpressUI.lua`:
-  - Garder le handler `AlertMessage` et `RoleAssigned` tels quels
+- les warnings temporels (`Plus que 2 heures`, etc.)
+- le message d'intro scenario
+- les messages `PlayerRevived` / `PlayerRespawned` tant qu'ils ne sont pas dupliques
+- les `AlertMessage` serveur pour coupure, fumee, incendie, game over
 
 ## Critere d'acceptation
 
-1. Chaque event du scenario produit au maximum 1 message visible
-2. Les messages roleplay (warnings temporels "Plus que 30 min!") restent en Say()
-3. Les messages d'event (coupure, incendie, game over) passent uniquement par AlertMessage
-
-## Dependencies
-
-- **EE-07 recommande avant**: Si EE-07 deplace les events cote serveur, certains
-  doublons disparaissent naturellement (le client ne declenche plus les events).
-  Faire EE-08 apres EE-07 simplifie le cleanup.
+1. Quand un joueur tombe a terre, **il ne voit qu'un seul message**: `Je suis a terre!...`
+2. Les autres joueurs voient toujours: `<username> est a terre! Allez le ranimer!`
+3. Aucun changement de comportement pour les warnings de temps et les alerts HUD serveur
+4. Pas de regression sur le flux revive / respawn
 
 ## Taille estimee
 
-Small (S) -- suppression de ~6 lignes `pl:Say()` + ajustements
+Small (S) -- guard supplementaire dans le handler client `PlayerDown`
