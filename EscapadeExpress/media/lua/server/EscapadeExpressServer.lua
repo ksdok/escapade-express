@@ -633,6 +633,7 @@ local ROLE_DEFS = {
             {"Base.PillsVitamins", 1},
             {"Base.Antibiotics", 1},
             {"Base.WaterBottleFull", 2},
+            {"Base.Map", 1},
             {"Base.Bag_ALICEpack_Army", 1},
             {"Base.Torch", 1},
             {"Base.Battery", 3},
