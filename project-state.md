@@ -39,7 +39,9 @@
 - Le choix de role post-spawn est maintenant implemente avec UI custom, validation serveur et timer retarde apres selection initiale
 - EE-12 est maintenant implemente: roster etendu a 16 roles uniques + Civil selectable/fallback, equipement automatique, picker compact en grille
 - Le lancement du jeu charge bien Escapade Express sans erreur Lua du mod; les warnings restants vus en log semblent venir surtout de Xonic's Mega Mall / map data
-- Le prochain focus doit revenir sur les tests solo/LAN puis le clean-up restant (EE-08, EE-09)
+- EE-08 est nettoye: le joueur a terre ne recoit plus son propre broadcast `PlayerDown`
+- EE-09 est implemente: les placeholders de coords sont centralises dans `media/lua/shared/EscapadeExpressConfig.lua`
+- Le prochain focus doit revenir sur les tests solo/LAN puis la definition/validation EE-11
 
 ### Concept (VALIDE)
 - 4 joueurs coop, debutants
@@ -118,8 +120,8 @@
 - [x] EE-05 (M) - Revoir la logique de revive pour respecter la spec (medic 30 sec / autre 1 min / sinon respawn) et le multijoueur
 - [x] EE-06 (M) - Fiabiliser l'assignation des 4 roles et des items/skills au lancement du scenario
 - [x] EE-07 (M) - Fiabiliser la synchro multi des evenements scripts cote serveur
-- [ ] EE-08 (S) - Nettoyer les messages dupliques client/UI
-- [ ] EE-09 (S) - Definir et documenter les placeholders de coords du mall dans le code
+- [x] EE-08 (S) - Nettoyer les messages dupliques client/UI
+- [x] EE-09 (S) - Definir et documenter les placeholders de coords du mall dans le code
 - [x] EE-10 (M) - Ajouter un plan de test minimal solo + LAN pour le scenario complet
 - [ ] EE-11 (S) - Definir collaborativement les objets de chaque role (items, quantites, vetements, equipement) -- validation utilisateur requise avant implementation
 - [x] EE-12 (M) - Ajouter de nouveaux roles: roster etendu a 16 roles uniques + Civil selectable/fallback, equipement automatique, picker grille, assignation >4 joueurs
@@ -182,3 +184,5 @@
 - 2026-07-16: EE-12 implemente: 12 nouveaux roles ajoutes, Civil selectable + fallback automatique, equipement auto au spawn, picker role etendu
 - 2026-07-16: Revue EE-12 integree: spec alignee sur Civil selectable, layout picker passe en grille compacte 3 colonnes
 - 2026-07-16: Lancement du jeu verifie via console.txt: chargement Escapade Express OK, vehicule/bidon/scenario prepares, pas d'erreur Lua du mod au boot
+- 2026-07-16: EE-08 nettoye: broadcast `PlayerDown` ignore maintenant le joueur deja a terre
+- 2026-07-16: EE-09 implemente: config shared `EscapadeExpressConfig.lua` ajoutee, placeholders coords centralises client/serveur
