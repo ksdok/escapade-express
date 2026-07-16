@@ -37,6 +37,8 @@
 - Le scenario se lance maintenant en solo, apparait dans Challenges, affiche un role et un chronometre
 - Le rythme du timer solo a ete corrige; le positionnement HUD reste a peaufiner plus tard
 - Le choix de role post-spawn est maintenant implemente avec UI custom, validation serveur et timer retarde apres selection initiale
+- EE-12 est maintenant implemente: roster etendu a 16 roles uniques + Civil selectable/fallback, equipement automatique, picker compact en grille
+- Le lancement du jeu charge bien Escapade Express sans erreur Lua du mod; les warnings restants vus en log semblent venir surtout de Xonic's Mega Mall / map data
 - Le prochain focus doit revenir sur les tests solo/LAN puis le clean-up restant (EE-08, EE-09)
 
 ### Concept (VALIDE)
@@ -120,7 +122,7 @@
 - [ ] EE-09 (S) - Definir et documenter les placeholders de coords du mall dans le code
 - [x] EE-10 (M) - Ajouter un plan de test minimal solo + LAN pour le scenario complet
 - [ ] EE-11 (S) - Definir collaborativement les objets de chaque role (items, quantites, vetements, equipement) -- validation utilisateur requise avant implementation
-- [ ] EE-12 (M) - Ajouter de nouveaux roles: Rambo, Sniper, Samourai (skills, items, mecaniques specifiques) -- adapter le systeme d'assignation pour >4 roles
+- [x] EE-12 (M) - Ajouter de nouveaux roles: roster etendu a 16 roles uniques + Civil selectable/fallback, equipement automatique, picker grille, assignation >4 joueurs
 - [x] EE-13 (M) - Ajouter un choix de role post-spawn avec UI custom, validation serveur et demarrage du timer apres selection initiale
 
 ---
@@ -177,3 +179,6 @@
 - 2026-07-16: Spec EE-13 ajustee (payload ChooseRole sans username client, timer decouple de la preparation technique, variante solo documentee)
 - 2026-07-16: EE-13 implemente: role picker UI, validation serveur, roster initial, timer demarre apres selection, rejoin conserve, fallback solo
 - 2026-07-16: Polish post-review EE-13 applique: hook fallback solo deregistre, reset d'etat serveur au nouveau scenario, helper temps partage, sync timer sur refus tardif
+- 2026-07-16: EE-12 implemente: 12 nouveaux roles ajoutes, Civil selectable + fallback automatique, equipement auto au spawn, picker role etendu
+- 2026-07-16: Revue EE-12 integree: spec alignee sur Civil selectable, layout picker passe en grille compacte 3 colonnes
+- 2026-07-16: Lancement du jeu verifie via console.txt: chargement Escapade Express OK, vehicule/bidon/scenario prepares, pas d'erreur Lua du mod au boot
