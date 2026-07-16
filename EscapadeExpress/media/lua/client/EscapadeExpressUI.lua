@@ -3,6 +3,8 @@
 -- Affiche le timer 3h, le role, et les alertes a l'ecran
 -- ============================================================
 
+require "EscapadeExpressShared"
+
 local UI = {}
 
 -- Couleurs (R, G, B, A) 0-1
@@ -21,17 +23,6 @@ local HUD_LINE_GAP = 24
 UI.messages = {}
 UI.messageDuration = 5  -- secondes d'affichage
 
-local function getNowSeconds()
-    if getTimestamp ~= nil then
-        return getTimestamp()
-    end
-
-    if os and os.time then
-        return os.time()
-    end
-
-    return math.floor(getGameTime():getWorldAgeHours() * 3600)
-end
 
 -- ============================================================
 -- OUTILS DE POSITIONNEMENT HUD
@@ -108,7 +99,7 @@ end
 -- ============================================================
 
 local function drawMessages()
-    local nowSeconds = getNowSeconds()
+    local nowSeconds = EE_getNowSeconds()
     local y = HUD_MARGIN_Y + (HUD_LINE_GAP * 2) + 10
     for i = #UI.messages, 1, -1 do
         local msg = UI.messages[i]
@@ -135,7 +126,7 @@ function UI.addMessage(text, color)
     table.insert(UI.messages, {
         text = text,
         color = color or COLOR_WHITE,
-        time = getNowSeconds()
+        time = EE_getNowSeconds()
     })
 end
 

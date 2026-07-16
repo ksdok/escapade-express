@@ -4,6 +4,8 @@
 -- Base sur le pattern Pillow's Random Scenarios
 -- ============================================================
 
+require "EscapadeExpressShared"
+
 EscapadeExpress = {}
 
 -- ============================================================
@@ -121,6 +123,8 @@ EE_gameOver = false
 
 local timeWarningsShown = {}
 local runtimeHooksRegistered = false
+local soloPickerFallbackAt = nil
+local soloFallbackTickRegistered = false
 
 local function isSinglePlayerRuntime()
     if isClient ~= nil then
@@ -189,6 +193,17 @@ local function syncWarningStateFromTimer()
     if remainingMin < 10 then timeWarningsShown[10] = true end
 end
 
+EscapadeExpress.ApplyRoleLocally = function(player, roleKey)
+    return applyRoleLocally(player, roleKey)
+end
+
+EscapadeExpress.StartLocalScenarioTimer = function()
+    if EE_startTime == nil then
+        EE_startTime = getGameTime():getWorldAgeHours()
+        syncWarningStateFromTimer()
+    end
+end
+
 local function enforceRealTimeDayLength()
     if SandboxVars ~= nil then
         SandboxVars.DayLength = 26
@@ -200,6 +215,18 @@ local function enforceRealTimeDayLength()
             gameTime:setMinutesPerDay(60 * 24)
         end
     end
+end
+
+local function ensureSoloFallbackTickRegistered()
+    if soloFallbackTickRegistered then return end
+    Events.OnTick.Add(EscapadeExpress.TickRolePickerFallback)
+    soloFallbackTickRegistered = true
+end
+
+local function unregisterSoloFallbackTick()
+    if not soloFallbackTickRegistered then return end
+    Events.OnTick.Remove(EscapadeExpress.TickRolePickerFallback)
+    soloFallbackTickRegistered = false
 end
 
 local gameStartEventRegistered = false
@@ -257,10 +284,13 @@ EscapadeExpress.OnNewGame = function()
         EE_startTime = nil
         EE_gameOver = false
         timeWarningsShown = {}
+        soloPickerFallbackAt = nil
 
         -- Initialisation locale une seule fois
         pl:getModData().EE_reviveEnabled = true
         pl:getModData().EE_role = nil  -- sera assigne par le serveur
+        pl:getModData().EE_localRoleApplied = nil
+        pl:getModData().EE_roleSelectionDenied = false
 
         -- Message d'intro
         pl:Say("On est pieges dans le mall! Trouvez un vehicule et un bidon d'essence!")
@@ -269,30 +299,64 @@ EscapadeExpress.OnNewGame = function()
         pl:getModData().EE_reviveEnabled = true
     end
 
-    -- Solo: fallback local car la voie client->serveur n'est pas fiable ici.
-    if isSinglePlayerRuntime() then
-        if pl:getModData().EE_role == nil then
-            applyRoleLocally(pl, "soldat")
-        end
-
-        if EE_startTime == nil then
-            EE_startTime = getGameTime():getWorldAgeHours()
-            syncWarningStateFromTimer()
-        end
-
+    if pl:getModData().EE_role ~= nil or pl:getModData().EE_roleSelectionDenied then
         return
     end
 
-    -- Multiplayer: re-tenter tant que le role n'est pas encore confirme
-    if pl:getModData().EE_role == nil then
-        sendClientCommand("EscapadeExpress", "PlayerReady", {
+    if sendClientCommand ~= nil then
+        if isSinglePlayerRuntime() and soloPickerFallbackAt == nil then
+            soloPickerFallbackAt = EE_getNowSeconds() + 3
+            ensureSoloFallbackTickRegistered()
+        end
+
+        -- Multiplayer: demander l'ouverture du picker tant que le role n'est pas confirme.
+        sendClientCommand("EscapadeExpress", "RolePickerReady", {
             username = pl:getUsername()
         })
+        return
+    end
+
+    -- Dernier recours: solo sans reseau local disponible.
+    if isSinglePlayerRuntime() and not EscapadeExpressRolePicker.isVisible() then
+        EscapadeExpressRolePicker.openLocal()
     end
 end
 
 EscapadeExpress.OnCreatePlayer = function()
     EscapadeExpress.OnNewGame()
+end
+
+EscapadeExpress.TickRolePickerFallback = function()
+    if soloPickerFallbackAt == nil then
+        unregisterSoloFallbackTick()
+        return
+    end
+
+    if not isSinglePlayerRuntime() then
+        soloPickerFallbackAt = nil
+        unregisterSoloFallbackTick()
+        return
+    end
+
+    local pl = getPlayer()
+    if pl == nil then return end
+    if pl:getModData().EE_role ~= nil then
+        soloPickerFallbackAt = nil
+        unregisterSoloFallbackTick()
+        return
+    end
+
+    if EscapadeExpressRolePicker.isVisible() then
+        soloPickerFallbackAt = nil
+        unregisterSoloFallbackTick()
+        return
+    end
+
+    if EE_getNowSeconds() >= soloPickerFallbackAt then
+        soloPickerFallbackAt = nil
+        unregisterSoloFallbackTick()
+        EscapadeExpressRolePicker.openLocal()
+    end
 end
 
 -- ============================================================
@@ -393,7 +457,6 @@ EscapadeExpress.OnPlayerDeath = function(player)
 
         -- Informer le serveur
         sendClientCommand("EscapadeExpress", "PlayerDown", {
-            username = player:getUsername(),
             x = modData.EE_downX,
             y = modData.EE_downY,
             z = modData.EE_downZ
@@ -415,12 +478,18 @@ local function onServerCommand(module, command, data)
         if pl and data.username == pl:getUsername() then
             pl:getModData().EE_role = data.role
             pl:getModData().EE_localRoleApplied = data.role
+            pl:getModData().EE_roleSelectionDenied = false
+            soloPickerFallbackAt = nil
+            unregisterSoloFallbackTick()
         end
     elseif command == "RoleDenied" then
         local pl = getPlayer()
         if pl and data.username == pl:getUsername() then
             pl:getModData().EE_role = nil
             pl:getModData().EE_reviveEnabled = false
+            pl:getModData().EE_roleSelectionDenied = true
+            soloPickerFallbackAt = nil
+            unregisterSoloFallbackTick()
         end
     elseif command == "PlayerDown" then
         local pl = getPlayer()

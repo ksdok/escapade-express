@@ -6,6 +6,10 @@
 local Server = {
     playerSlots = {},
     roleLoadouts = {},
+    selectionRoster = {},
+    selectionConfirmed = {},
+    selectionDenied = {},
+    scenarioPrepared = false,
     escapeVehicle = nil,
     gameStarted = false,
     gasCanSpawned = false,
@@ -167,28 +171,94 @@ end
 -- ASSIGNATION ET APPLICATION DES ROLES
 -- ============================================================
 
-local function assignRole(player)
-    local username = player:getUsername()
+local function getAssignedRole(username)
     if username == nil then return nil end
+    return Server.playerSlots[username]
+end
 
-    local assignedRole = Server.playerSlots[username]
-    if assignedRole ~= nil then
-        return assignedRole
-    end
-
-    local takenRoles = {}
-    for _, takenRole in pairs(Server.playerSlots) do
-        takenRoles[takenRole] = true
-    end
-
-    for _, roleKey in ipairs(ROLE_ORDER) do
-        if not takenRoles[roleKey] then
-            Server.playerSlots[username] = roleKey
-            return roleKey
+local function isRoleTaken(roleKey, exceptUsername)
+    for username, takenRole in pairs(Server.playerSlots) do
+        if username ~= exceptUsername and takenRole == roleKey then
+            return true, username
         end
     end
 
-    return nil
+    return false, nil
+end
+
+local function hasFreeRole(exceptUsername)
+    for _, roleKey in ipairs(ROLE_ORDER) do
+        local taken = isRoleTaken(roleKey, exceptUsername)
+        if not taken then
+            return true
+        end
+    end
+
+    return false
+end
+
+local function buildRolePickerState()
+    local result = {}
+
+    for _, roleKey in ipairs(ROLE_ORDER) do
+        local taken, username = isRoleTaken(roleKey)
+        result[roleKey] = {
+            taken = taken,
+            takenBy = username,
+        }
+    end
+
+    return result
+end
+
+local function broadcastRolePickerState()
+    sendServerCommand("EscapadeExpress", "SyncRolePickerState", {
+        roleStates = buildRolePickerState()
+    })
+end
+
+local function markSelectionDenied(username)
+    if username == nil then return end
+    Server.selectionDenied[username] = true
+    Server.selectionConfirmed[username] = nil
+end
+
+local function markSelectionConfirmed(username, roleKey)
+    if username == nil then return end
+    Server.selectionConfirmed[username] = roleKey
+    Server.selectionDenied[username] = nil
+end
+
+local function addPlayerToInitialRoster(username)
+    if username == nil or Server.gameStarted then return end
+    Server.selectionRoster[username] = true
+end
+
+local function maybeStartScenarioTimer()
+    if not Server.scenarioPrepared or Server.gameStarted then
+        return false
+    end
+
+    for username, _ in pairs(Server.selectionRoster) do
+        if not Server.selectionConfirmed[username] and not Server.selectionDenied[username] then
+            return false
+        end
+    end
+
+    if next(Server.selectionRoster) == nil then
+        return false
+    end
+
+    Server.gameStarted = true
+    Server.gameOver = false
+    Server.powerOutageDone = false
+    Server.fireDone = false
+    Server.fireWarningDone = false
+    Server.startTime = getGameTime():getWorldAgeHours()
+
+    print("[EE] Timer du scenario demarre, startTime=" .. tostring(Server.startTime))
+    syncTimerToClients()
+    return true
 end
 
 local function applyRole(player, roleKey)
@@ -284,8 +354,25 @@ end
 -- INITIALISATION DU SCENARIO
 -- ============================================================
 
-local function ensureScenarioStarted()
-    if Server.gameStarted then return false end
+local function resetScenarioState()
+    Server.playerSlots = {}
+    Server.roleLoadouts = {}
+    Server.selectionRoster = {}
+    Server.selectionConfirmed = {}
+    Server.selectionDenied = {}
+    Server.scenarioPrepared = false
+    Server.escapeVehicle = nil
+    Server.gameStarted = false
+    Server.gasCanSpawned = false
+    Server.startTime = nil
+    Server.powerOutageDone = false
+    Server.fireDone = false
+    Server.fireWarningDone = false
+    Server.gameOver = false
+end
+
+local function prepareScenario()
+    if Server.scenarioPrepared then return false end
 
     if SandboxVars ~= nil then
         SandboxVars.DayLength = 26
@@ -298,17 +385,14 @@ local function ensureScenarioStarted()
         end
     end
 
-    Server.gameStarted = true
+    Server.scenarioPrepared = true
     Server.gameOver = false
-    Server.powerOutageDone = false
-    Server.fireDone = false
-    Server.fireWarningDone = false
-    Server.startTime = getGameTime():getWorldAgeHours()
+    Server.startTime = nil
 
     spawnEscapeVehicle()
     spawnGasCan()
 
-    print("[EE] Scenario demarre, startTime=" .. tostring(Server.startTime))
+    print("[EE] Scenario prepare, en attente du choix des roles")
     return true
 end
 
@@ -590,9 +674,8 @@ end
 -- ============================================================
 
 local function onGameStart()
-    if ensureScenarioStarted() then
-        syncTimerToClients()
-    end
+    resetScenarioState()
+    prepareScenario()
 end
 Events.OnGameStart.Add(onGameStart)
 
@@ -607,25 +690,109 @@ Events.EveryHours.Add(serverEveryHours)
 local function onClientCommand(module, command, player, data)
     if module ~= "EscapadeExpress" then return end
 
-    if command == "PlayerReady" then
-        ensureScenarioStarted()
+    if command == "RolePickerReady" then
+        prepareScenario()
 
         local username = player:getUsername()
-        local roleKey = assignRole(player)
+        local assignedRole = getAssignedRole(username)
 
-        if roleKey == nil then
+        if assignedRole ~= nil then
+            markSelectionConfirmed(username, assignedRole)
+            applyRole(player, assignedRole)
+
+            sendServerCommand("EscapadeExpress", "RoleAssigned", {
+                username = username,
+                role = assignedRole,
+                roleName = ROLE_NAMES[assignedRole] or assignedRole
+            })
+
+            if Server.gameStarted then
+                syncTimerToClients()
+            else
+                maybeStartScenarioTimer()
+            end
+            return
+        end
+
+        if not Server.gameStarted then
+            addPlayerToInitialRoster(username)
+        end
+
+        if not hasFreeRole(username) then
             local modData = player:getModData()
             modData.EE_role = nil
             modData.EE_reviveEnabled = false
+            markSelectionDenied(username)
 
             print("[EE] Aucun role disponible pour " .. tostring(username) .. " (scenario limite a 4 joueurs)")
-            syncTimerToClients()
             sendServerCommand("EscapadeExpress", "RoleDenied", {
                 username = username,
                 text = "Trop de joueurs pour ce scenario!"
             })
+
+            if Server.gameStarted then
+                syncTimerToClients()
+            else
+                maybeStartScenarioTimer()
+            end
             return
         end
+
+        sendServerCommand("EscapadeExpress", "OpenRolePicker", {
+            username = username,
+            roleStates = buildRolePickerState()
+        })
+        broadcastRolePickerState()
+
+    elseif command == "ChooseRole" then
+        prepareScenario()
+
+        local username = player:getUsername()
+        local roleKey = data and data.roleKey or nil
+
+        if roleKey == nil or ROLE_DEFS[roleKey] == nil then
+            sendServerCommand("EscapadeExpress", "RoleUnavailable", {
+                username = username,
+                roleKey = roleKey,
+                text = "Role invalide.",
+                roleStates = buildRolePickerState()
+            })
+            return
+        end
+
+        local assignedRole = getAssignedRole(username)
+        if assignedRole ~= nil then
+            applyRole(player, assignedRole)
+            sendServerCommand("EscapadeExpress", "RoleAssigned", {
+                username = username,
+                role = assignedRole,
+                roleName = ROLE_NAMES[assignedRole] or assignedRole
+            })
+            if Server.gameStarted then
+                syncTimerToClients()
+            else
+                maybeStartScenarioTimer()
+            end
+            return
+        end
+
+        if not Server.gameStarted then
+            addPlayerToInitialRoster(username)
+        end
+
+        local taken, takenBy = isRoleTaken(roleKey, username)
+        if taken then
+            sendServerCommand("EscapadeExpress", "RoleUnavailable", {
+                username = username,
+                roleKey = roleKey,
+                text = "Ce role vient d'etre pris par " .. tostring(takenBy) .. ".",
+                roleStates = buildRolePickerState()
+            })
+            return
+        end
+
+        Server.playerSlots[username] = roleKey
+        markSelectionConfirmed(username, roleKey)
 
         local loadoutGranted = applyRole(player, roleKey)
         if loadoutGranted then
@@ -634,13 +801,18 @@ local function onClientCommand(module, command, player, data)
             print("[EE] Role resynchronise: " .. tostring(username) .. " = " .. (ROLE_NAMES[roleKey] or roleKey))
         end
 
-        syncTimerToClients()
-
         sendServerCommand("EscapadeExpress", "RoleAssigned", {
             username = username,
             role = roleKey,
             roleName = ROLE_NAMES[roleKey] or roleKey
         })
+        broadcastRolePickerState()
+
+        if Server.gameStarted then
+            syncTimerToClients()
+        else
+            maybeStartScenarioTimer()
+        end
 
     elseif command == "PlayerDown" then
         local downX = data and data.x or nil

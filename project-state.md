@@ -34,6 +34,10 @@
 - La revue a releve plusieurs problemes techniques dans ce prototype
 - Le backlog ci-dessous est redecoupe en tickets small a medium pour corriger et fiabiliser le scenario
 - Le point d'entree scenario est conserve; on corrige l'implementation plutot que changer de produit
+- Le scenario se lance maintenant en solo, apparait dans Challenges, affiche un role et un chronometre
+- Le rythme du timer solo a ete corrige; le positionnement HUD reste a peaufiner plus tard
+- Le choix de role post-spawn est maintenant implemente avec UI custom, validation serveur et timer retarde apres selection initiale
+- Le prochain focus doit revenir sur les tests solo/LAN puis le clean-up restant (EE-08, EE-09)
 
 ### Concept (VALIDE)
 - 4 joueurs coop, debutants
@@ -91,9 +95,9 @@
 - [x] Verifier la synchro multi des events (coupure elec, incendie, zombies, game over)
 - [ ] Garder les coordonnees en placeholders tant que le debug en jeu n'est pas fait
 
-### Phase 4: Test du scenario -- A FAIRE
-- [ ] Installer le mod dans ~/Zomboid/mods/
-- [ ] Verifier que le scenario apparait dans Challenges via Pillow's Random Scenarios
+### Phase 4: Test du scenario -- EN COURS
+- [x] Installer le mod dans ~/Zomboid/mods/
+- [x] Verifier que le scenario apparait dans Challenges via Pillow's Random Scenarios
 - [ ] Test solo: verifier spawn, items, skills, chronometre
 - [ ] Test solo: verifier coupure elec et incendie
 - [ ] Test multi (LAN): verifier revive, sync des events, vehicule, spawn bidon
@@ -110,13 +114,14 @@
 - [x] EE-03 (S) - Corriger le spawn du bidon avec `SpawnWorldInventoryItem` ou equivalent valide
 - [x] EE-04 (S) - Verifier/remplacer `getTimestampMs()` dans l'UI
 - [x] EE-05 (M) - Revoir la logique de revive pour respecter la spec (medic 30 sec / autre 1 min / sinon respawn) et le multijoueur
-- [ ] EE-06 (M) - Fiabiliser l'assignation des 4 roles et des items/skills au lancement du scenario
+- [x] EE-06 (M) - Fiabiliser l'assignation des 4 roles et des items/skills au lancement du scenario
 - [x] EE-07 (M) - Fiabiliser la synchro multi des evenements scripts cote serveur
 - [ ] EE-08 (S) - Nettoyer les messages dupliques client/UI
 - [ ] EE-09 (S) - Definir et documenter les placeholders de coords du mall dans le code
-- [ ] EE-10 (M) - Ajouter un plan de test minimal solo + LAN pour le scenario complet
+- [x] EE-10 (M) - Ajouter un plan de test minimal solo + LAN pour le scenario complet
 - [ ] EE-11 (S) - Definir collaborativement les objets de chaque role (items, quantites, vetements, equipement) -- validation utilisateur requise avant implementation
 - [ ] EE-12 (M) - Ajouter de nouveaux roles: Rambo, Sniper, Samourai (skills, items, mecaniques specifiques) -- adapter le systeme d'assignation pour >4 roles
+- [x] EE-13 (M) - Ajouter un choix de role post-spawn avec UI custom, validation serveur et demarrage du timer apres selection initiale
 
 ---
 
@@ -163,3 +168,12 @@
 - 2026-07-15: Clean-up post-review applique sur EE-05 (doc revive alignee + setDoDeathSound cote serveur)
 - 2026-07-15: EE-07 implemente: timer et evenements scripts passes sous autorite serveur avec SyncTimer pour les late joiners
 - 2026-07-15: EE-07 corrige post-review: warnings late joiner alignes sur le vrai temps restant et AlertMessage dedoublonne avec l'UI
+- 2026-07-15: EE-06 implemente: slots deterministes par username, rejoin conserve, loadouts non dupliques, 5e joueur refuse
+- 2026-07-15: Plan de test minimal EE-10 redige pour solo + LAN
+- 2026-07-15: Bug de chargement corrige: `Events.EveryMinutes` remplace par `Events.EveryOneMinute` (B41)
+- 2026-07-15: Fallback solo ajoute puis scenario valide en solo de base (apparition dans Challenges, role visible, chronometre visible)
+- 2026-07-15: Rythme du timer solo corrige via day length temps reel; HUD role/timer encore a peaufiner
+- 2026-07-15: Spec EE-13 redigee pour un choix de role post-spawn avec UI custom et validation serveur
+- 2026-07-16: Spec EE-13 ajustee (payload ChooseRole sans username client, timer decouple de la preparation technique, variante solo documentee)
+- 2026-07-16: EE-13 implemente: role picker UI, validation serveur, roster initial, timer demarre apres selection, rejoin conserve, fallback solo
+- 2026-07-16: Polish post-review EE-13 applique: hook fallback solo deregistre, reset d'etat serveur au nouveau scenario, helper temps partage, sync timer sur refus tardif

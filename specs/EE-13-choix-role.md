@@ -86,6 +86,7 @@ Implementation minimale recommandee:
 Quand le joueur choisit un role:
 
 - le client envoie `ChooseRole` au serveur avec `roleKey`;
+- le serveur identifie le joueur via l'argument `player` de `OnClientCommand` (ne pas faire confiance a un `username` envoye par le client);
 - le serveur verifie si le role est libre;
 - si oui:
   - lock le role pour ce username;
@@ -152,6 +153,10 @@ Le timer demarre quand:
 - tous les joueurs du `selectionRoster` ont un role confirme; ou
 - ils ont ete explicitement refuses (>4 joueurs).
 
+Note d'implementation:
+- l'initialisation technique du scenario (hooks, spawn vehicule, spawn bidon) peut rester preparee au chargement;
+- en revanche `Server.startTime` doit rester `nil` tant que la phase initiale de selection n'est pas terminee.
+
 Pseudo-logique:
 
 ```lua
@@ -187,7 +192,7 @@ Si un joueur rejoint apres le debut reel du scenario:
 - `RolePickerReady`
   - signale que le client est spawn et pret a voir le picker
 - `ChooseRole`
-  - payload: `{ username, roleKey }`
+  - payload: `{ roleKey }`
 
 ### Serveur -> Client
 
@@ -216,6 +221,18 @@ Responsabilites:
 - afficher les roles deja pris;
 - envoyer `ChooseRole`;
 - fermer la fenetre quand `RoleAssigned` est recu.
+
+### Variante solo toleree si necessaire
+
+Objectif prioritaire: garder le meme flux client -> serveur en multi.
+
+Si le runtime solo de PZ ne delivre pas fiablement les commandes client/serveur pour ce scenario, une variante locale est acceptable **uniquement en solo**:
+- ouvrir le meme picker cote client;
+- appliquer le role localement apres confirmation locale;
+- demarrer `EE_startTime` seulement apres ce choix;
+- ne jamais retomber sur l'auto-assignation immediate `soldat`.
+
+Cette variante ne change pas la cible MP: en multijoueur, le serveur reste l'autorite.
 
 ### Fichiers a modifier
 
