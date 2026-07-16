@@ -964,6 +964,9 @@ local function applyRole(player, roleKey)
     for _, skillDef in ipairs(def.skills) do
         local perk, level = skillDef[1], skillDef[2]
         player:getXp():setXPToLevel(perk, level)
+        if player.setPerkLevel ~= nil then
+            player:setPerkLevel(perk, level)
+        end
     end
 
     equipRoleItems(player, inv, def.equipped)
