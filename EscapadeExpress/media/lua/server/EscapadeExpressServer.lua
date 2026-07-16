@@ -937,6 +937,41 @@ local function maybeStartScenarioTimer()
     return true
 end
 
+local function isPassivePerk(perk)
+    return perk == Perks.Strength or perk == Perks.Fitness
+end
+
+local function applyPerkLevel(player, perk, level)
+    if player == nil or perk == nil or level == nil then return end
+
+    local xp = player:getXp()
+    xp:setXPToLevel(perk, level)
+
+    if isPassivePerk(perk) and player.setPerkLevelDebug ~= nil then
+        player:setPerkLevelDebug(perk, level)
+    end
+
+    if player.getPerkLevel ~= nil then
+        local currentLevel = player:getPerkLevel(perk)
+
+        if currentLevel ~= nil and player.LevelPerk ~= nil then
+            while currentLevel < level do
+                player:LevelPerk(perk, false)
+                currentLevel = currentLevel + 1
+            end
+        end
+
+        if currentLevel ~= nil and player.LoseLevel ~= nil then
+            while currentLevel > level do
+                player:LoseLevel(perk)
+                currentLevel = currentLevel - 1
+            end
+        end
+    end
+
+    xp:setXPToLevel(perk, level)
+end
+
 local function applyRole(player, roleKey)
     local def = ROLE_DEFS[roleKey]
     if not def then return false end
@@ -963,10 +998,7 @@ local function applyRole(player, roleKey)
 
     for _, skillDef in ipairs(def.skills) do
         local perk, level = skillDef[1], skillDef[2]
-        player:getXp():setXPToLevel(perk, level)
-        if player.setPerkLevel ~= nil then
-            player:setPerkLevel(perk, level)
-        end
+        applyPerkLevel(player, perk, level)
     end
 
     equipRoleItems(player, inv, def.equipped)
