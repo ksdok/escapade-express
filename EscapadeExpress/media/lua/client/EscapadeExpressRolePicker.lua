@@ -16,48 +16,48 @@ local ROLE_ORDER = {
 local ROLE_INFO = {
     soldat = {
         name = "Soldat",
-        summary = "Combat / protection",
-        strengths = "Pistolet, robustesse",
+        summary = "Combat / assaut",
+        strengths = "Pistolet, couteau, sac de soin",
     },
     voleur = {
         name = "Voleur",
-        summary = "Furtivite / utilitaire",
-        strengths = "Crowbar, discretion",
+        summary = "Furtivite / melee",
+        strengths = "Crowbar, discretion, sac léger",
     },
     local_ = {
         name = "Local",
         summary = "Survie / ressources",
-        strengths = "Outils, vivres, sac",
+        strengths = "Outils, vivres, carte du mall",
     },
     medic = {
         name = "Medic",
         summary = "Soin / support",
-        strengths = "Bandages, secours",
+        strengths = "Soins lourds, couteau, duffel",
     },
     rambo = {
         name = "Rambo",
-        summary = "Tank melee",
-        strengths = "Hache, endurance, peur basse",
+        summary = "Assaut / melee",
+        strengths = "Hache, lance machette, tank",
     },
     sniper = {
         name = "Sniper",
         summary = "Tir longue distance",
-        strengths = ".308, lunette x4, discretion",
+        strengths = ".308 x50, lunette x4, discretion",
     },
     samourai = {
         name = "Samourai",
-        summary = "Katana / mobilite",
-        strengths = "Katana, agilite",
+        summary = "Katana / precision",
+        strengths = "Katana, lames, mobilite",
     },
     geek = {
         name = "Geek",
         summary = "Electronique / support",
-        strengths = "Repare, craft, bidouille",
+        strengths = "Pieces, livres, bidouille",
     },
     survivaliste = {
         name = "Survivaliste",
-        summary = "Autonomie / nature",
-        strengths = "Feu, pieges, vivres",
+        summary = "Nature / precision",
+        strengths = "Sniper, ALICE pack, camping",
     },
     pompier = {
         name = "Pompier",
@@ -67,7 +67,7 @@ local ROLE_INFO = {
     mecanicien = {
         name = "Mecanicien",
         summary = "Vehicule / reparations",
-        strengths = "Van, pneus, soudure",
+        strengths = "Crowbar, outils, reparations",
     },
     athlete = {
         name = "Athlete",
@@ -87,7 +87,7 @@ local ROLE_INFO = {
     invincible = {
         name = "Invincible",
         summary = "Tout au max",
-        strengths = "M16, Magnum, Katana",
+        strengths = "Assault rifle, katana, max stats",
     },
     mule = {
         name = "Mule",

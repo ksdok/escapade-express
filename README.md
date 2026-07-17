@@ -26,12 +26,14 @@ Scénario custom qui s'intègre dans Pillow's Random Scenarios (apparaît dans l
 
 Les rôles sont maintenant choisis via une fenêtre post-spawn. Le serveur valide qu'un rôle n'est pris qu'une seule fois. Un joueur qui se déconnecte et revient garde son rôle. Un 5e joueur est refusé.
 
+EE-11 verrouille la V1 des 4 rôles historiques ci-dessous. Une partie du roster étendu EE-12 a aussi été rebalancée dans le code, mais ce tableau reste centré sur les rôles débutants LAN.
+
 | Rôle | Compétences | Items clés |
 |------|-------------|------------|
-| Soldat | Aiming 4, Reloading 3, Fitness 4, Strength 4, Sneak 2 | Pistol, PistolMagazine x2, Bullets9mm x30, Bandages x3, Torche, Batteries, Hoodie noir |
-| Voleur | Sneak 5, Lightfoot 5, Nimble 5, Electrical 2, Fitness 3 | Crowbar, Screwdriver, Bandages x2, Torche, Batterie, Hoodie blanc, Chaussures |
-| Local | Cooking 4, Carpentry 4, PlantScavenging 3, Fitness 3, Strength 3 | Hammer, Clous x20, Scie, Eau x2, Haricots x2, Ouvre-boîte, Sac à dos, Carte |
-| Medic | Doctor 6, Fitness 3, Strength 3, Aiming 2 | Bandages x5, Désinfectant x2, Antidouleurs x2, Antibiotiques, Torche, Batteries x2, Sac Duffel |
+| Soldat | Aiming 9, Reloading 10, Lightfoot 5, Nimble 9, Sneak 4, Strength 7, Fitness 7, SmallBlade 8, LongBlade 7, Sprinting 4 | Pistol, HuntingKnife, 9mmClip x2, Bullets9mm x30, Bandages x3, Torche, Batteries x2, Eau x1, Sac Duffel |
+| Voleur | Lightfoot 8, Nimble 6, Sneak 9, Strength 3, Fitness 7, SmallBlade 8, SmallBlunt 7, LongBlunt 7, Sprinting 6 | Crowbar, Screwdriver, Bandages x2, Torche, Batterie, Eau x1, Schoolbag, Hoodie blanc, Chaussures |
+| Local | Cooking 4, Carpentry 4, PlantScavenging 3, Fitness 3, Strength 3 | Hammer, Clous x20, Scie, Eau x2, Haricots x2, Ouvre-boîte, Bandages x2, Torche, Batterie, Sac à dos, Carte |
+| Medic | Doctor 10, Fitness 6, Lightfoot 5, Strength 4, Sneak 3, Nimble 5, Sprinting 3 | KitchenKnife, Bandages x5, Désinfectant x2, Pills x2, Antibiotiques, Torche, Batteries x2, Eau x1, Sac Duffel |
 
 Tous les rôles démarrent avec: Panic 30, Hunger 0.2, Thirst 0.2, Fatigue 0.
 
@@ -263,8 +265,8 @@ Voir `project-state.md` pour le backlog complet et `specs/` pour les spécificat
 | EE-08 | Nettoyer les messages dupliqués | ✅ |
 | EE-09 | Centraliser les placeholders de coords | ✅ |
 | EE-10 | Plan de test solo + LAN | ✅ |
-| EE-11 | Définir les objets de chaque rôle | à faire (validation) |
-| EE-12 | Nouveaux rôles: Rambo, Sniper, Samouraï | à faire |
+| EE-11 | Définir les objets de chaque rôle | ✅ |
+| EE-12 | Nouveaux rôles: roster étendu 16 rôles + Civil | ✅ |
 | EE-13 | Choix de rôle post-spawn avec UI | ✅ |
 
 ## Repo
