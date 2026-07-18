@@ -1,0 +1,4 @@
+Challenge_EN = {
+    Challenge_EscapadeExpress_name = "Escapade Express",
+    Challenge_EscapadeExpress_desc = "Trapped inside Xonic's Mega Mall, your group has three hours to gear up, survive the rising chaos, and escape with the van.",
+}
