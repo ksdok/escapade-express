@@ -12,6 +12,7 @@ local Server = {
     selectionConfirmed = {},
     selectionDenied = {},
     scenarioPrepared = false,
+    worldObjectsPrepared = false,
     escapeVehicle = nil,
     escapeVehicleKey = nil,
     escapeVehicleBattery = nil,
@@ -1365,18 +1366,18 @@ end
 -- ============================================================
 
 local function spawnEscapeVehicle()
-    if Server.escapeVehicle ~= nil then return end
+    if Server.escapeVehicle ~= nil then return true end
 
     local sq = getCell():getGridSquare(PARKING_X, PARKING_Y, PARKING_Z)
     if sq == nil then
-        print("[EE] ERREUR: Impossible de trouver le square du parking")
-        return
+        print("[EE] Spawn vehicule differe: square parking indisponible, retry plus tard")
+        return false
     end
 
     local car = addVehicleDebug("Base.Van", IsoDirections.E, nil, sq)
     if car == nil then
-        print("[EE] ERREUR: Impossible de spawner le vehicule")
-        return
+        print("[EE] Spawn vehicule differe: addVehicleDebug a echoue, retry plus tard")
+        return false
     end
 
     car:repair()
@@ -1403,6 +1404,7 @@ local function spawnEscapeVehicle()
 
     Server.escapeVehicle = car
     print("[EE] Vehicule d'escape spawn au parking (" .. PARKING_X .. "," .. PARKING_Y .. ")")
+    return true
 end
 
 local function unregisterVehicleExplosionTick()
@@ -1475,49 +1477,98 @@ end
 -- ============================================================
 
 local function spawnGasCan()
-    if Server.gasCanSpawned then return end
+    if Server.gasCanSpawned then return true end
 
     local sq = getCell():getGridSquare(GAS_CAN_LOCATION.x, GAS_CAN_LOCATION.y, GAS_CAN_LOCATION.z)
     if sq == nil then
-        print("[EE] ERREUR: Impossible de trouver le square du bidon d'essence")
-        return
+        print("[EE] Spawn bidon differe: square bidon indisponible, retry plus tard")
+        return false
     end
 
     Server.gasCanItem = sq:AddWorldInventoryItem("Base.PetrolCan", 0.5, 0.5, 0.0)
     Server.gasCanSpawned = true
     print("[EE] Bidon d'essence spawn (" .. GAS_CAN_LOCATION.x .. "," .. GAS_CAN_LOCATION.y .. ")")
+    return true
 end
 
 local function spawnCarKey()
-    if Server.carKeySpawned then return end
+    if Server.carKeySpawned then return true end
     if Server.escapeVehicleKey == nil then
-        print("[EE] ERREUR: Cle de vehicule indisponible pour le spawn")
-        return
+        print("[EE] Spawn cle differe: vehicule ou cle non prete, retry plus tard")
+        return false
     end
 
     local sq = getCell():getGridSquare(CAR_KEY_LOCATION.x, CAR_KEY_LOCATION.y, CAR_KEY_LOCATION.z)
     if sq == nil then
-        print("[EE] ERREUR: Impossible de trouver le square de la cle de vehicule")
-        return
+        print("[EE] Spawn cle differe: square cle indisponible, retry plus tard")
+        return false
     end
 
     Server.escapeVehicleKey = sq:AddWorldInventoryItem(Server.escapeVehicleKey, 0.5, 0.5, 0.0)
     Server.carKeySpawned = true
     print("[EE] Cle du vehicule spawn (" .. CAR_KEY_LOCATION.x .. "," .. CAR_KEY_LOCATION.y .. ")")
+    return true
 end
 
 local function spawnCarBattery()
-    if Server.carBatterySpawned then return end
+    if Server.carBatterySpawned then return true end
 
     local sq = getCell():getGridSquare(CAR_BATTERY_LOCATION.x, CAR_BATTERY_LOCATION.y, CAR_BATTERY_LOCATION.z)
     if sq == nil then
-        print("[EE] ERREUR: Impossible de trouver le square de la batterie de voiture")
-        return
+        print("[EE] Spawn batterie differe: square batterie indisponible, retry plus tard")
+        return false
     end
 
     Server.escapeVehicleBattery = sq:AddWorldInventoryItem("Base.CarBattery1", 0.5, 0.5, 0.0)
     Server.carBatterySpawned = true
     print("[EE] Batterie du vehicule spawn (" .. CAR_BATTERY_LOCATION.x .. "," .. CAR_BATTERY_LOCATION.y .. ")")
+    return true
+end
+
+local function areWorldObjectsReady()
+    return Server.escapeVehicle ~= nil
+        and Server.gasCanSpawned
+        and Server.carKeySpawned
+        and Server.carBatterySpawned
+end
+
+local function updateWorldObjectsPreparedState()
+    local ready = areWorldObjectsReady()
+
+    if ready and not Server.worldObjectsPrepared then
+        Server.worldObjectsPrepared = true
+        print("[EE] Objets d'evasion prets: van + bidon + cle + batterie")
+    else
+        Server.worldObjectsPrepared = ready
+    end
+
+    return ready
+end
+
+local function tryPrepareWorldObjects()
+    if Server.worldObjectsPrepared then
+        return true
+    end
+
+    if Server.escapeVehicle == nil then
+        spawnEscapeVehicle()
+    end
+
+    if not Server.gasCanSpawned then
+        spawnGasCan()
+    end
+
+    if Server.escapeVehicleKey ~= nil and not Server.carKeySpawned then
+        spawnCarKey()
+    elseif Server.escapeVehicleKey == nil and not Server.carKeySpawned then
+        print("[EE] Spawn cle differe: vehicule ou cle non prete, retry plus tard")
+    end
+
+    if not Server.carBatterySpawned then
+        spawnCarBattery()
+    end
+
+    return updateWorldObjectsPreparedState()
 end
 
 local function isSameInventoryItem(a, b)
@@ -1651,6 +1702,7 @@ local function resetScenarioState()
     Server.selectionConfirmed = {}
     Server.selectionDenied = {}
     Server.scenarioPrepared = false
+    Server.worldObjectsPrepared = false
     Server.escapeVehicle = nil
     Server.escapeVehicleKey = nil
     Server.escapeVehicleBattery = nil
@@ -1675,30 +1727,28 @@ local function resetScenarioState()
 end
 
 local function prepareScenario()
-    if Server.scenarioPrepared then return false end
+    local firstPreparation = not Server.scenarioPrepared
 
-    if SandboxVars ~= nil then
-        SandboxVars.DayLength = 26
-    end
-
-    if getGameTime ~= nil then
-        local gameTime = getGameTime()
-        if gameTime ~= nil and gameTime.setMinutesPerDay ~= nil then
-            gameTime:setMinutesPerDay(60 * 24)
+    if firstPreparation then
+        if SandboxVars ~= nil then
+            SandboxVars.DayLength = 26
         end
+
+        if getGameTime ~= nil then
+            local gameTime = getGameTime()
+            if gameTime ~= nil and gameTime.setMinutesPerDay ~= nil then
+                gameTime:setMinutesPerDay(60 * 24)
+            end
+        end
+
+        Server.scenarioPrepared = true
+        Server.gameOver = false
+        Server.startTime = nil
+
+        print("[EE] Scenario prepare, en attente du choix des roles")
     end
 
-    Server.scenarioPrepared = true
-    Server.gameOver = false
-    Server.startTime = nil
-
-    spawnEscapeVehicle()
-    spawnGasCan()
-    spawnCarKey()
-    spawnCarBattery()
-
-    print("[EE] Scenario prepare, en attente du choix des roles")
-    return true
+    return tryPrepareWorldObjects()
 end
 
 -- ============================================================
@@ -1929,6 +1979,12 @@ end
 -- MONITORING PERIODIQUE DES EVENTS
 -- ============================================================
 
+local function retryWorldObjectsEveryMinute()
+    if not Server.scenarioPrepared or Server.worldObjectsPrepared then return end
+
+    tryPrepareWorldObjects()
+end
+
 local function serverEveryMinutes()
     if Server.startTime == nil or Server.gameOver then return end
 
@@ -2034,6 +2090,7 @@ Events.OnGameStart.Add(onGameStart)
 
 Events.EveryOneMinute.Add(checkDownedPlayers)
 Events.EveryOneMinute.Add(checkObjectiveItemsPickedUp)
+Events.EveryOneMinute.Add(retryWorldObjectsEveryMinute)
 Events.EveryOneMinute.Add(serverEveryMinutes)
 Events.EveryTenMinutes.Add(refillBuilderResources)
 Events.EveryHours.Add(serverEveryHours)

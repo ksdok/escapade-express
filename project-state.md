@@ -48,7 +48,10 @@
 - EE-15 est maintenant implemente en code: van sans cle, batterie dechargee, cle et batterie cachees dans le mall, hordes declenchees sur ramassage des objets d'objectif sous validation serveur
 - Les coords reelles de la cle et de la batterie ont maintenant ete relevees en jeu et injectees dans la config shared
 - EE-16 est maintenant implemente en code: role Builder ajoute au roster, port illimite, stock massif et re-garnissage periodique des ressources cote serveur
-- Le prochain focus doit revenir sur les tests solo/LAN complets de EE-15 (cle/batterie/hordes) et EE-16 (builder/refill), ainsi que la validation en jeu du roster EE-11
+- Un test solo du 2026-07-18 a montre que la preparation serveur du scenario peut arriver trop tot: squares du parking/bidon/cle/batterie indisponibles au `OnGameStart`, donc aucun objet d'escape n'est spawn et la cle reste introuvable en jeu
+- EE-17 est maintenant implemente en code cote serveur: retry differe du van, du bidon, de la cle et de la batterie tant que les squares du mall ne sont pas prets
+- Pour contourner le non-chargement des squares trop lointains, le spawn joueurs a ete rapproche du parking et le vehicule d'escape a ete deplace pres de la zone de depart
+- Le prochain focus doit maintenant verifier en solo puis en LAN EE-17 avec EE-15 (objets d'escape + hordes), EE-16 (builder/refill), ainsi que la validation en jeu finale du roster EE-11
 
 ### Concept (VALIDE)
 - 4 joueurs coop, debutants
@@ -136,6 +139,7 @@
 - [x] EE-14 (M) - Faire exploser le vehicule d'escape 2-3 sec apres le premier demarrage moteur, une seule fois, sous autorite serveur
 - [x] EE-15 (M) - Cle de vehicule, batterie déchargee et hordes declenchees par ramassage d'objet-cle (bidon/cle/batterie)
 - [x] EE-16 (S) - Role Builder: skills construction a 10, setUnlimitedCarry, stock massif, re-garnissage periodique EveryTenMinutes
+- [ ] EE-17 (M) - Retarder et re-essayer le spawn du vehicule et des objets d'escape tant que les squares du mall ne sont pas charges
 
 ---
 
@@ -198,6 +202,7 @@
 - 2026-07-16: EE-09 implemente: config shared `EscapadeExpressConfig.lua` ajoutee, placeholders coords centralises client/serveur
 - 2026-07-16: Spawn valide releve en jeu: rectangle monde X=11356..11360, Y=8944..8946, Z=0 (cell 37x29)
 - 2026-07-16: Coordonnees validees en jeu: voiture au parking X=11189, Y=8739, Z=0; bidon X=11174, Y=8432, Z=4
+- 2026-07-18: Repositionnement test anti-EE-17: spawn joueurs deplace vers X=11367..11375, Y=8944..8946, Z=0; vehicule d'escape deplace vers X=11370, Y=8955, Z=0 pour rapprocher les squares critiques de la zone chargee
 - 2026-07-16: Role Invincible ajuste: `Base.Map` ajoutee au loadout
 - 2026-07-16: EE-14 propose: explosion du vehicule d'escape 2-3 sec apres le premier demarrage moteur (one-shot, serveur)
 - 2026-07-16: EE-14 implemente et valide en jeu: trigger au premier demarrage, one-shot, timer tick-based cote serveur, fallback solo, alertes warning/danger
@@ -209,3 +214,5 @@
 - 2026-07-18: Coordonnees validees en jeu pour EE-15: cle X=11601 Y=8681 Z=0; batterie X=11520 Y=8405 Z=0
 - 2026-07-18: EE-15 implemente en code puis corrige post-review: van sans cle + batterie dechargee, spawns cle/batterie, hordes one-shot, scan recursif des sacs cote serveur, retrait du `PetrolCan` du role Mule, verification `luac -p` OK
 - 2026-07-18: EE-16 implemente: role Builder ajoute serveur/client/picker, `setUnlimitedCarry` aligne sur le role, re-garnissage `EveryTenMinutes` ajoute cote serveur, verification `luac -p` OK
+- 2026-07-18: Test solo post-EE-16: logs `[EE]` confirment que `prepareScenario()` tente le spawn trop tot (`square du parking`/`bidon`/`batterie` introuvables, `cle de vehicule indisponible`); ticket EE-17 et spec dedies a creer
+- 2026-07-18: EE-17 implemente en code cote serveur: `worldObjectsPrepared`, `tryPrepareWorldObjects()`, retries sur `OnGameStart` / `RolePickerReady` / `EveryOneMinute`, logs differe/succes final; validation en jeu encore a faire
