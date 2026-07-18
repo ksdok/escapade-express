@@ -268,6 +268,9 @@ Voir `project-state.md` pour le backlog complet et `specs/` pour les spécificat
 | EE-11 | Définir les objets de chaque rôle | ✅ |
 | EE-12 | Nouveaux rôles: roster étendu 16 rôles + Civil | ✅ |
 | EE-13 | Choix de rôle post-spawn avec UI | ✅ |
+| EE-14 | Explosion du véhicule d'escape après démarrage | ✅ |
+| EE-15 | Clé, batterie déchargée et hordes par ramassage | ✅ |
+| EE-16 | Rôle Builder (construction illimitée) | ⏳ |
 
 ## Repo
 

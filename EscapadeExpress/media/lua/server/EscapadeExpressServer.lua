@@ -13,6 +13,9 @@ local Server = {
     selectionDenied = {},
     scenarioPrepared = false,
     escapeVehicle = nil,
+    escapeVehicleKey = nil,
+    escapeVehicleBattery = nil,
+    gasCanItem = nil,
     vehicleStartDetected = false,
     vehicleExploded = false,
     vehicleExplodeTickDelay = nil,
@@ -20,6 +23,11 @@ local Server = {
     vehicleExplosionTickActive = false,
     gameStarted = false,
     gasCanSpawned = false,
+    carKeySpawned = false,
+    carBatterySpawned = false,
+    bidonHordeTriggered = false,
+    keyHordeTriggered = false,
+    batteryHordeTriggered = false,
     startTime = nil,
     powerOutageDone = false,
     fireDone = false,
@@ -36,6 +44,8 @@ local PARKING_Y = EE_Config.parking.y
 local PARKING_Z = EE_Config.parking.z
 
 local GAS_CAN_LOCATION = EE_Config.gasCan
+local CAR_KEY_LOCATION = EE_Config.carKey
+local CAR_BATTERY_LOCATION = EE_Config.carBattery
 local RESPAWN_X = EE_Config.respawn.x
 local RESPAWN_Y = EE_Config.respawn.y
 local RESPAWN_Z = EE_Config.respawn.z
@@ -869,7 +879,6 @@ local ROLE_DEFS = {
             {"Base.TinnedBeans", 3},
             {"Base.TinnedSoup", 3},
             {"Base.TinOpener", 1},
-            {"Base.PetrolCan", 1},
             {"Base.Hat_Army", 1},
             {"Base.Jacket_CoatArmy", 1},
             {"Base.Trousers", 1},
@@ -885,7 +894,6 @@ local ROLE_DEFS = {
             {"Base.TinnedBeans", 3},
             {"Base.TinnedSoup", 3},
             {"Base.TinOpener", 1},
-            {"Base.PetrolCan", 1},
             {"Base.DuctTape", 2},
             {"Base.Rope", 1},
         },
@@ -1285,6 +1293,21 @@ local function spawnEscapeVehicle()
         gasTank:setContainerContentAmount(0)
     end
 
+    local batteryPart = nil
+    if car.getBattery ~= nil then
+        batteryPart = car:getBattery()
+    end
+    if batteryPart == nil then
+        batteryPart = car:getPartById("Battery")
+    end
+    if batteryPart ~= nil and batteryPart.setContainerContentAmount ~= nil then
+        batteryPart:setContainerContentAmount(0)
+    end
+
+    if car.createVehicleKey ~= nil then
+        Server.escapeVehicleKey = car:createVehicleKey()
+    end
+
     Server.escapeVehicle = car
     print("[EE] Vehicule d'escape spawn au parking (" .. PARKING_X .. "," .. PARKING_Y .. ")")
 end
@@ -1367,9 +1390,159 @@ local function spawnGasCan()
         return
     end
 
-    sq:AddWorldInventoryItem("Base.PetrolCan", 0.5, 0.5, 0.0)
+    Server.gasCanItem = sq:AddWorldInventoryItem("Base.PetrolCan", 0.5, 0.5, 0.0)
     Server.gasCanSpawned = true
     print("[EE] Bidon d'essence spawn (" .. GAS_CAN_LOCATION.x .. "," .. GAS_CAN_LOCATION.y .. ")")
+end
+
+local function spawnCarKey()
+    if Server.carKeySpawned then return end
+    if Server.escapeVehicleKey == nil then
+        print("[EE] ERREUR: Cle de vehicule indisponible pour le spawn")
+        return
+    end
+
+    local sq = getCell():getGridSquare(CAR_KEY_LOCATION.x, CAR_KEY_LOCATION.y, CAR_KEY_LOCATION.z)
+    if sq == nil then
+        print("[EE] ERREUR: Impossible de trouver le square de la cle de vehicule")
+        return
+    end
+
+    Server.escapeVehicleKey = sq:AddWorldInventoryItem(Server.escapeVehicleKey, 0.5, 0.5, 0.0)
+    Server.carKeySpawned = true
+    print("[EE] Cle du vehicule spawn (" .. CAR_KEY_LOCATION.x .. "," .. CAR_KEY_LOCATION.y .. ")")
+end
+
+local function spawnCarBattery()
+    if Server.carBatterySpawned then return end
+
+    local sq = getCell():getGridSquare(CAR_BATTERY_LOCATION.x, CAR_BATTERY_LOCATION.y, CAR_BATTERY_LOCATION.z)
+    if sq == nil then
+        print("[EE] ERREUR: Impossible de trouver le square de la batterie de voiture")
+        return
+    end
+
+    Server.escapeVehicleBattery = sq:AddWorldInventoryItem("Base.CarBattery1", 0.5, 0.5, 0.0)
+    Server.carBatterySpawned = true
+    print("[EE] Batterie du vehicule spawn (" .. CAR_BATTERY_LOCATION.x .. "," .. CAR_BATTERY_LOCATION.y .. ")")
+end
+
+local function isSameInventoryItem(a, b)
+    if a == nil or b == nil then return false end
+    if a == b then return true end
+
+    if a.getID ~= nil and b.getID ~= nil then
+        return a:getID() == b:getID()
+    end
+
+    return false
+end
+
+local function containerHasItemRecursive(container, targetItem)
+    if container == nil or targetItem == nil or container.getItems == nil then return false end
+
+    local items = container:getItems()
+    if items == nil then return false end
+
+    for i = 0, items:size() - 1 do
+        local entry = items:get(i)
+        if isSameInventoryItem(entry, targetItem) then
+            return true
+        end
+
+        local childContainer = entry and entry.getItemContainer and entry:getItemContainer() or nil
+        if childContainer ~= nil and containerHasItemRecursive(childContainer, targetItem) then
+            return true
+        end
+    end
+
+    return false
+end
+
+local function playerInventoryContainsItem(player, item)
+    if player == nil or item == nil then return false end
+
+    local inv = player:getInventory()
+    return containerHasItemRecursive(inv, item)
+end
+
+local function findPlayerHoldingItem(item)
+    if item == nil then return nil end
+
+    for _, player in ipairs(getScenarioPlayers()) do
+        if playerInventoryContainsItem(player, item) then
+            return player
+        end
+    end
+
+    return nil
+end
+
+local function triggerItemHorde(itemType, foundByPlayer)
+    local count = 0
+    local text = nil
+    local alertType = "warning"
+
+    if itemType == "bidon" then
+        if Server.bidonHordeTriggered then return false end
+        Server.bidonHordeTriggered = true
+        count = 30
+        text = "Le bidon a ete recupere! Une horde converge vers le mall!"
+        alertType = "warning"
+    elseif itemType == "cle" then
+        if Server.keyHordeTriggered then return false end
+        Server.keyHordeTriggered = true
+        count = 40
+        text = "La cle du van a ete trouvee! Les zombies affluent!"
+        alertType = "danger"
+    elseif itemType == "batterie" then
+        if Server.batteryHordeTriggered then return false end
+        Server.batteryHordeTriggered = true
+        count = 50
+        text = "La batterie est securisee! Une enorme horde arrive!"
+        alertType = "danger"
+    else
+        return false
+    end
+
+    for _, entrance in ipairs(MALL_ENTRANCES) do
+        spawnZombies({
+            x = entrance.x,
+            y = entrance.y,
+            z = entrance.z,
+            count = count,
+        })
+    end
+
+    if foundByPlayer ~= nil then
+        addSound(foundByPlayer, POWER_OUTAGE_CENTER.x, POWER_OUTAGE_CENTER.y, POWER_OUTAGE_CENTER.z, 120, 220)
+    end
+    broadcastAlert(text, alertType)
+    print("[EE] Horde declenchee pour l'objet " .. tostring(itemType) .. " par " .. tostring(foundByPlayer and foundByPlayer:getUsername() or "inconnu"))
+    return true
+end
+
+local function checkObjectiveItemsPickedUp()
+    if not Server.bidonHordeTriggered then
+        local gasHolder = findPlayerHoldingItem(Server.gasCanItem)
+        if gasHolder ~= nil then
+            triggerItemHorde("bidon", gasHolder)
+        end
+    end
+
+    if not Server.keyHordeTriggered then
+        local keyHolder = findPlayerHoldingItem(Server.escapeVehicleKey)
+        if keyHolder ~= nil then
+            triggerItemHorde("cle", keyHolder)
+        end
+    end
+
+    if not Server.batteryHordeTriggered then
+        local batteryHolder = findPlayerHoldingItem(Server.escapeVehicleBattery)
+        if batteryHolder ~= nil then
+            triggerItemHorde("batterie", batteryHolder)
+        end
+    end
 end
 
 -- ============================================================
@@ -1386,6 +1559,9 @@ local function resetScenarioState()
     Server.selectionDenied = {}
     Server.scenarioPrepared = false
     Server.escapeVehicle = nil
+    Server.escapeVehicleKey = nil
+    Server.escapeVehicleBattery = nil
+    Server.gasCanItem = nil
     Server.vehicleStartDetected = false
     Server.vehicleExploded = false
     Server.vehicleExplodeTickDelay = nil
@@ -1393,6 +1569,11 @@ local function resetScenarioState()
     Server.vehicleExplosionTickActive = false
     Server.gameStarted = false
     Server.gasCanSpawned = false
+    Server.carKeySpawned = false
+    Server.carBatterySpawned = false
+    Server.bidonHordeTriggered = false
+    Server.keyHordeTriggered = false
+    Server.batteryHordeTriggered = false
     Server.startTime = nil
     Server.powerOutageDone = false
     Server.fireDone = false
@@ -1420,6 +1601,8 @@ local function prepareScenario()
 
     spawnEscapeVehicle()
     spawnGasCan()
+    spawnCarKey()
+    spawnCarBattery()
 
     print("[EE] Scenario prepare, en attente du choix des roles")
     return true
@@ -1709,6 +1892,7 @@ end
 Events.OnGameStart.Add(onGameStart)
 
 Events.EveryOneMinute.Add(checkDownedPlayers)
+Events.EveryOneMinute.Add(checkObjectiveItemsPickedUp)
 Events.EveryOneMinute.Add(serverEveryMinutes)
 Events.EveryHours.Add(serverEveryHours)
 
@@ -1857,6 +2041,11 @@ local function onClientCommand(module, command, player, data)
         end
 
         scheduleEscapeVehicleExplosion()
+    elseif command == "KeyItemFound" then
+        local itemType = data and data.item or nil
+        if itemType == "bidon" or itemType == "batterie" then
+            checkObjectiveItemsPickedUp()
+        end
     elseif command == "PlayerDown" then
         local downX = data and data.x or nil
         local downY = data and data.y or nil

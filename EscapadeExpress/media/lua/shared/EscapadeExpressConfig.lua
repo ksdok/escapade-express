@@ -90,6 +90,10 @@ EE_Config.shops = {
 -- Bidon d'essence valide releve en jeu
 EE_Config.gasCan = {x = 11174, y = 8432, z = 4}
 
+-- PLACEHOLDERS EE-15: cle et batterie cachees a ajuster en jeu
+EE_Config.carKey = {x = 11601, y = 8681, z = 0}
+EE_Config.carBattery = {x = 11520, y = 8405, z = 0}
+
 -- PLACEHOLDER: remplacer par le vrai centre de la zone de coupure electrique
 EE_Config.powerOutageCenter = {x = 11200, y = 8450, z = 0}
 EE_Config.powerOutageRadius = 100

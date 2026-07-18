@@ -45,7 +45,9 @@
 - EE-14 est maintenant implemente et valide en jeu: le vehicule d'escape explose 2-3 sec apres le premier demarrage, une seule fois, avec timer tick-based cote serveur et fallback solo
 - EE-11 est maintenant implemente en code pour l'ensemble du roster valide (16 roles + Civil), avec `bagContents` pour ranger directement une partie du loadout dans le sac
 - Les roles restants EE-11 (Pompier, Mecanicien, Athlete, Eclaireur, Demolisseur, Invincible, Mule, Civil) sont maintenant reportes cote serveur et dans le fallback client
-- Le prochain focus doit revenir sur les tests solo/LAN complets et la validation en jeu des nouveaux loadouts EE-11
+- EE-15 est maintenant implemente en code: van sans cle, batterie dechargee, cle et batterie cachees dans le mall, hordes declenchees sur ramassage des objets d'objectif sous validation serveur
+- Les coords reelles de la cle et de la batterie ont maintenant ete relevees en jeu et injectees dans la config shared
+- Le prochain focus doit revenir sur les tests solo/LAN complets de EE-15 (cle/batterie/hordes) et la validation en jeu du roster EE-11
 
 ### Concept (VALIDE)
 - 4 joueurs coop, debutants
@@ -131,6 +133,8 @@
 - [x] EE-12 (M) - Ajouter de nouveaux roles: roster etendu a 16 roles uniques + Civil selectable/fallback, equipement automatique, picker grille, assignation >4 joueurs
 - [x] EE-13 (M) - Ajouter un choix de role post-spawn avec UI custom, validation serveur et demarrage du timer apres selection initiale
 - [x] EE-14 (M) - Faire exploser le vehicule d'escape 2-3 sec apres le premier demarrage moteur, une seule fois, sous autorite serveur
+- [x] EE-15 (M) - Cle de vehicule, batterie déchargee et hordes declenchees par ramassage d'objet-cle (bidon/cle/batterie)
+- [ ] EE-16 (S) - Role Builder: skills construction a 10, setUnlimitedCarry, stock massif, re-garnissage periodique EveryTenMinutes
 
 ---
 
@@ -200,3 +204,6 @@
 - 2026-07-16: Survivaliste valide puis aligne en code (ALICE pack, HuntingRifle, x4Scope, .308 x40, equipement de camping dans le sac), serveur/client synchronises et syntaxe Lua OK
 - 2026-07-16: Validation spec EE-11 terminee pour les roles restants: Pompier, Mecanicien, Athlete, Eclaireur, Demolisseur, Invincible, Mule et Civil
 - 2026-07-16: EE-11 etendu aux roles restants; `ROLE_DEFS` serveur/client realignes pour le roster complet, `bagContents` ajoute sur les nouveaux sacs, verification `luac -p` OK
+- 2026-07-18: Spec EE-15 validee puis ajustee avec la doc PZ B41 / Context7: batterie monde en `Base.CarBattery1`, detection serveur par reference d'objet, fallback client immediat pour bidon/batterie
+- 2026-07-18: Coordonnees validees en jeu pour EE-15: cle X=11601 Y=8681 Z=0; batterie X=11520 Y=8405 Z=0
+- 2026-07-18: EE-15 implemente en code puis corrige post-review: van sans cle + batterie dechargee, spawns cle/batterie, hordes one-shot, scan recursif des sacs cote serveur, retrait du `PetrolCan` du role Mule, verification `luac -p` OK

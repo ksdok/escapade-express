@@ -812,7 +812,6 @@ local ROLE_DEFS = {
             {"Base.TinnedBeans", 3},
             {"Base.TinnedSoup", 3},
             {"Base.TinOpener", 1},
-            {"Base.PetrolCan", 1},
             {"Base.Hat_Army", 1},
             {"Base.Jacket_CoatArmy", 1},
             {"Base.Trousers", 1},
@@ -828,7 +827,6 @@ local ROLE_DEFS = {
             {"Base.TinnedBeans", 3},
             {"Base.TinnedSoup", 3},
             {"Base.TinOpener", 1},
-            {"Base.PetrolCan", 1},
             {"Base.DuctTape", 2},
             {"Base.Rope", 1},
         },
@@ -888,6 +886,7 @@ local runtimeHooksRegistered = false
 local soloPickerFallbackAt = nil
 local soloFallbackTickRegistered = false
 local engineStartReported = false
+local keyItemsReported = { bidon = false, batterie = false }
 local vehicleEngineApiWarningShown = false
 local soloVehicleExplosionVehicle = nil
 local soloVehicleExplosionTickDelay = nil
@@ -1229,6 +1228,14 @@ local function scheduleSoloVehicleExplosion(vehicle)
     showLocalAlert("Le moteur s'etouffe...", "warning")
 end
 
+local function hasAnyCarBattery(inv)
+    if inv == nil or inv.contains == nil then return false end
+
+    return inv:contains("Base.CarBattery1")
+        or inv:contains("Base.CarBattery2")
+        or inv:contains("Base.CarBattery3")
+end
+
 local function registerRuntimeHooks()
     if runtimeHooksRegistered then return end
 
@@ -1271,6 +1278,7 @@ EscapadeExpress.OnNewGame = function()
         timeWarningsShown = {}
         soloPickerFallbackAt = nil
         engineStartReported = false
+        keyItemsReported = { bidon = false, batterie = false }
         resetSoloVehicleExplosionState()
 
         pl:getModData().EE_reviveEnabled = true
@@ -1278,9 +1286,13 @@ EscapadeExpress.OnNewGame = function()
         pl:getModData().EE_localRoleApplied = nil
         pl:getModData().EE_roleSelectionDenied = false
 
-        pl:Say("On est pieges dans le mall! Trouvez un vehicule et un bidon d'essence!")
+        pl:Say("On est pieges dans le mall! Trouvez le bidon, la cle et une batterie pour fuir!")
     else
         pl:getModData().EE_reviveEnabled = true
+    end
+
+    if pl:getHoursSurvived() <= 1 then
+        keyItemsReported = { bidon = false, batterie = false }
     end
 
     if pl:getModData().EE_role ~= nil or pl:getModData().EE_roleSelectionDenied then
@@ -1445,11 +1457,25 @@ EscapadeExpress.TickSoloVehicleExplosion = function()
 end
 
 EscapadeExpress.OnPlayerUpdate = function(player)
-    if engineStartReported or EE_gameOver then return end
-    if player == nil then return end
+    if EE_gameOver or player == nil then return end
 
     local localPlayer = getPlayer()
     if localPlayer == nil or player ~= localPlayer then return end
+
+    local inv = player:getInventory()
+    if sendClientCommand ~= nil and inv ~= nil then
+        if not keyItemsReported.bidon and inv:contains("Base.PetrolCan") then
+            keyItemsReported.bidon = true
+            sendClientCommand("EscapadeExpress", "KeyItemFound", { item = "bidon" })
+        end
+
+        if not keyItemsReported.batterie and hasAnyCarBattery(inv) then
+            keyItemsReported.batterie = true
+            sendClientCommand("EscapadeExpress", "KeyItemFound", { item = "batterie" })
+        end
+    end
+
+    if engineStartReported then return end
 
     local vehicle = player:getVehicle()
     if vehicle == nil or not isVehicleEngineStarted(vehicle) then return end
