@@ -10,7 +10,7 @@ local ROLE_ORDER = {
     "rambo", "sniper", "samourai", "geek",
     "survivaliste", "pompier", "mecanicien", "athlete",
     "eclaireur", "demolisseur", "invincible", "mule",
-    "civil",
+    "builder", "civil",
 }
 
 local ROLE_INFO = {
@@ -93,6 +93,11 @@ local ROLE_INFO = {
         name = "Mule",
         summary = "Transport / stockage",
         strengths = "Gros sac, bidon, vivres",
+    },
+    builder = {
+        name = "Builder",
+        summary = "Construction / support",
+        strengths = "Ressources, poids illimite, refill",
     },
     civil = {
         name = "Civil",
@@ -269,7 +274,7 @@ function RolePickerPanel:prerender()
     ISPanel.prerender(self)
 
     self:drawTextCentre("Choisis ton role", self.width / 2, 12, 1, 1, 1, 1, UIFont.Medium)
-    self:drawText("16 roles uniques + Civil selectionnable. Si tout est pris, Civil devient le fallback automatique.", 16, 40, 0.9, 0.9, 0.9, 1, UIFont.Small)
+    self:drawText("17 roles uniques + Civil selectionnable. Si tout est pris, Civil devient le fallback automatique.", 16, 40, 0.9, 0.9, 0.9, 1, UIFont.Small)
     self:drawText("Le chrono commencera quand la selection initiale sera terminee.", 16, 58, 0.9, 0.9, 0.9, 1, UIFont.Small)
 end
 

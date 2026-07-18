@@ -47,7 +47,8 @@
 - Les roles restants EE-11 (Pompier, Mecanicien, Athlete, Eclaireur, Demolisseur, Invincible, Mule, Civil) sont maintenant reportes cote serveur et dans le fallback client
 - EE-15 est maintenant implemente en code: van sans cle, batterie dechargee, cle et batterie cachees dans le mall, hordes declenchees sur ramassage des objets d'objectif sous validation serveur
 - Les coords reelles de la cle et de la batterie ont maintenant ete relevees en jeu et injectees dans la config shared
-- Le prochain focus doit revenir sur les tests solo/LAN complets de EE-15 (cle/batterie/hordes) et la validation en jeu du roster EE-11
+- EE-16 est maintenant implemente en code: role Builder ajoute au roster, port illimite, stock massif et re-garnissage periodique des ressources cote serveur
+- Le prochain focus doit revenir sur les tests solo/LAN complets de EE-15 (cle/batterie/hordes) et EE-16 (builder/refill), ainsi que la validation en jeu du roster EE-11
 
 ### Concept (VALIDE)
 - 4 joueurs coop, debutants
@@ -134,7 +135,7 @@
 - [x] EE-13 (M) - Ajouter un choix de role post-spawn avec UI custom, validation serveur et demarrage du timer apres selection initiale
 - [x] EE-14 (M) - Faire exploser le vehicule d'escape 2-3 sec apres le premier demarrage moteur, une seule fois, sous autorite serveur
 - [x] EE-15 (M) - Cle de vehicule, batterie déchargee et hordes declenchees par ramassage d'objet-cle (bidon/cle/batterie)
-- [ ] EE-16 (S) - Role Builder: skills construction a 10, setUnlimitedCarry, stock massif, re-garnissage periodique EveryTenMinutes
+- [x] EE-16 (S) - Role Builder: skills construction a 10, setUnlimitedCarry, stock massif, re-garnissage periodique EveryTenMinutes
 
 ---
 
@@ -207,3 +208,4 @@
 - 2026-07-18: Spec EE-15 validee puis ajustee avec la doc PZ B41 / Context7: batterie monde en `Base.CarBattery1`, detection serveur par reference d'objet, fallback client immediat pour bidon/batterie
 - 2026-07-18: Coordonnees validees en jeu pour EE-15: cle X=11601 Y=8681 Z=0; batterie X=11520 Y=8405 Z=0
 - 2026-07-18: EE-15 implemente en code puis corrige post-review: van sans cle + batterie dechargee, spawns cle/batterie, hordes one-shot, scan recursif des sacs cote serveur, retrait du `PetrolCan` du role Mule, verification `luac -p` OK
+- 2026-07-18: EE-16 implemente: role Builder ajoute serveur/client/picker, `setUnlimitedCarry` aligne sur le role, re-garnissage `EveryTenMinutes` ajoute cote serveur, verification `luac -p` OK

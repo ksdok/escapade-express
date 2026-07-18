@@ -62,13 +62,14 @@ local POWER_OUTAGE_RADIUS = EE_Config.powerOutageRadius
 
 local vehicleExplosionTick = nil
 
--- Roles: 16 roles uniques pour les slots prioritaires, Civil restant
+-- Roles: 17 roles uniques pour les slots prioritaires, Civil restant
 -- selectionnable manuellement et attribuable en fallback automatique.
 local ROLE_ORDER = {
     "soldat", "voleur", "local_", "medic",
     "rambo", "sniper", "samourai", "geek",
     "survivaliste", "pompier", "mecanicien", "athlete",
     "eclaireur", "demolisseur", "invincible", "mule",
+    "builder",
 }
 
 local ROLE_NAMES = {
@@ -88,6 +89,7 @@ local ROLE_NAMES = {
     demolisseur = "Demolisseur",
     invincible = "Invincible",
     mule = "Mule",
+    builder = "Builder",
     civil = "Civil",
 }
 
@@ -909,6 +911,79 @@ local ROLE_DEFS = {
         },
         stats = { endurance = 0.5, panic = 25 },
     },
+    builder = {
+        name = "Builder",
+        skills = {
+            {Perks.Carpentry, 10},
+            {Perks.Electricity, 10},
+            {Perks.MetalWelding, 10},
+            {Perks.Mechanics, 10},
+            {Perks.Tailoring, 10},
+            {Perks.Cooking, 10},
+            {Perks.Strength, 7},
+            {Perks.Fitness, 5},
+        },
+        items = {
+            {"Base.Hammer", 1},
+            {"Base.Saw", 1},
+            {"Base.Screwdriver", 1},
+            {"Base.Wrench", 1},
+            {"Base.WeldingMask", 1},
+            {"Base.BlowTorch", 1},
+            {"Base.Crowbar", 1},
+            {"Base.Sledgehammer", 1},
+            {"Base.GardenSaw", 1},
+            {"Base.TinOpener", 1},
+            {"Base.Torch", 1},
+            {"Base.Battery", 3},
+            {"Base.Plank", 50},
+            {"Base.Nails", 200},
+            {"Base.SheetMetal", 20},
+            {"Base.ScrapMetal", 30},
+            {"Base.Wire", 10},
+            {"Base.DuctTape", 10},
+            {"Base.Rope", 5},
+            {"Base.MetalPipe", 10},
+            {"Base.Glue", 5},
+            {"Base.MetalBar", 10},
+            {"Base.Screws", 100},
+            {"Base.Bandage", 5},
+            {"Base.WaterBottleFull", 2},
+            {"Base.TinnedBeans", 3},
+            {"Base.TinnedSoup", 3},
+            {"Base.Bag_BigHikingBag", 1},
+            {"Base.Boilersuit", 1},
+            {"Base.Trousers", 1},
+            {"Base.Shoes_ArmyBoots", 1},
+        },
+        bagContents = {
+            {"Base.Plank", 20},
+            {"Base.Nails", 80},
+            {"Base.SheetMetal", 8},
+            {"Base.ScrapMetal", 12},
+            {"Base.Wire", 4},
+            {"Base.DuctTape", 4},
+            {"Base.Rope", 2},
+            {"Base.MetalPipe", 4},
+            {"Base.Glue", 2},
+            {"Base.MetalBar", 4},
+            {"Base.Screws", 40},
+            {"Base.Bandage", 5},
+            {"Base.WaterBottleFull", 2},
+            {"Base.TinnedBeans", 3},
+            {"Base.TinnedSoup", 3},
+        },
+        equipped = {
+            primary = "Base.Crowbar",
+            bag = "Base.Bag_BigHikingBag",
+            clothes = {
+                "Base.Boilersuit",
+                "Base.Trousers",
+                "Base.Shoes_ArmyBoots",
+            },
+        },
+        stats = { endurance = 0.3, panic = 20 },
+    },
     civil = {
         name = "Civil",
         skills = {
@@ -943,6 +1018,20 @@ local ROLE_DEFS = {
         },
         stats = { panic = 50, endurance = 0.2, fatigue = 0.15 },
     },
+}
+
+local BUILDER_REFILL_ITEMS = {
+    {"Base.Plank", 50},
+    {"Base.Nails", 200},
+    {"Base.SheetMetal", 20},
+    {"Base.ScrapMetal", 30},
+    {"Base.Wire", 10},
+    {"Base.DuctTape", 10},
+    {"Base.Rope", 5},
+    {"Base.MetalPipe", 10},
+    {"Base.Glue", 5},
+    {"Base.MetalBar", 10},
+    {"Base.Screws", 100},
 }
 
 -- ============================================================
@@ -1259,6 +1348,10 @@ local function applyRole(player, roleKey)
 
     equipRoleItems(player, inv, def.equipped)
     applyRoleStats(player, def.stats)
+
+    if player.setUnlimitedCarry ~= nil then
+        player:setUnlimitedCarry(roleKey == "builder")
+    end
 
     if username ~= nil then
         Server.roleLoadouts[username] = roleKey
@@ -1862,6 +1955,54 @@ local function serverEveryMinutes()
     end
 end
 
+local function countContainerItemsRecursive(container, itemId)
+    if container == nil or itemId == nil or container.getItems == nil then return 0 end
+
+    local items = container:getItems()
+    if items == nil then return 0 end
+
+    local total = 0
+
+    for i = 0, items:size() - 1 do
+        local entry = items:get(i)
+        if entry ~= nil and entry.getFullType ~= nil and entry:getFullType() == itemId then
+            total = total + 1
+        end
+
+        local childContainer = entry and entry.getItemContainer and entry:getItemContainer() or nil
+        if childContainer ~= nil then
+            total = total + countContainerItemsRecursive(childContainer, itemId)
+        end
+    end
+
+    return total
+end
+
+local function refillBuilderResources()
+    if Server.gameOver then return end
+
+    for _, player in ipairs(getScenarioPlayers()) do
+        local modData = player:getModData()
+
+        if modData.EE_role == "builder" then
+            local inv = player:getInventory()
+
+            for _, refillDef in ipairs(BUILDER_REFILL_ITEMS) do
+                local itemId = refillDef[1]
+                local targetCount = refillDef[2]
+                local currentCount = countContainerItemsRecursive(inv, itemId)
+                local needed = targetCount - currentCount
+
+                if needed > 1 then
+                    inv:AddItems(itemId, needed)
+                elseif needed == 1 then
+                    inv:AddItem(itemId)
+                end
+            end
+        end
+    end
+end
+
 local function serverEveryHours()
     if Server.startTime == nil or Server.gameOver then return end
 
@@ -1894,6 +2035,7 @@ Events.OnGameStart.Add(onGameStart)
 Events.EveryOneMinute.Add(checkDownedPlayers)
 Events.EveryOneMinute.Add(checkObjectiveItemsPickedUp)
 Events.EveryOneMinute.Add(serverEveryMinutes)
+Events.EveryTenMinutes.Add(refillBuilderResources)
 Events.EveryHours.Add(serverEveryHours)
 
 -- ============================================================

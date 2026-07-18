@@ -41,6 +41,7 @@ local ROLE_NAMES = {
     demolisseur = "Demolisseur",
     invincible = "Invincible",
     mule = "Mule",
+    builder = "Builder",
     civil = "Civil",
 }
 
@@ -842,6 +843,78 @@ local ROLE_DEFS = {
         },
         stats = { endurance = 0.5, panic = 25 },
     },
+    builder = {
+        skills = {
+            {Perks.Carpentry, 10},
+            {Perks.Electricity, 10},
+            {Perks.MetalWelding, 10},
+            {Perks.Mechanics, 10},
+            {Perks.Tailoring, 10},
+            {Perks.Cooking, 10},
+            {Perks.Strength, 7},
+            {Perks.Fitness, 5},
+        },
+        items = {
+            {"Base.Hammer", 1},
+            {"Base.Saw", 1},
+            {"Base.Screwdriver", 1},
+            {"Base.Wrench", 1},
+            {"Base.WeldingMask", 1},
+            {"Base.BlowTorch", 1},
+            {"Base.Crowbar", 1},
+            {"Base.Sledgehammer", 1},
+            {"Base.GardenSaw", 1},
+            {"Base.TinOpener", 1},
+            {"Base.Torch", 1},
+            {"Base.Battery", 3},
+            {"Base.Plank", 50},
+            {"Base.Nails", 200},
+            {"Base.SheetMetal", 20},
+            {"Base.ScrapMetal", 30},
+            {"Base.Wire", 10},
+            {"Base.DuctTape", 10},
+            {"Base.Rope", 5},
+            {"Base.MetalPipe", 10},
+            {"Base.Glue", 5},
+            {"Base.MetalBar", 10},
+            {"Base.Screws", 100},
+            {"Base.Bandage", 5},
+            {"Base.WaterBottleFull", 2},
+            {"Base.TinnedBeans", 3},
+            {"Base.TinnedSoup", 3},
+            {"Base.Bag_BigHikingBag", 1},
+            {"Base.Boilersuit", 1},
+            {"Base.Trousers", 1},
+            {"Base.Shoes_ArmyBoots", 1},
+        },
+        bagContents = {
+            {"Base.Plank", 20},
+            {"Base.Nails", 80},
+            {"Base.SheetMetal", 8},
+            {"Base.ScrapMetal", 12},
+            {"Base.Wire", 4},
+            {"Base.DuctTape", 4},
+            {"Base.Rope", 2},
+            {"Base.MetalPipe", 4},
+            {"Base.Glue", 2},
+            {"Base.MetalBar", 4},
+            {"Base.Screws", 40},
+            {"Base.Bandage", 5},
+            {"Base.WaterBottleFull", 2},
+            {"Base.TinnedBeans", 3},
+            {"Base.TinnedSoup", 3},
+        },
+        equipped = {
+            primary = "Base.Crowbar",
+            bag = "Base.Bag_BigHikingBag",
+            clothes = {
+                "Base.Boilersuit",
+                "Base.Trousers",
+                "Base.Shoes_ArmyBoots",
+            },
+        },
+        stats = { endurance = 0.3, panic = 20 },
+    },
     civil = {
         skills = {
             {Perks.Fitness, 1},
@@ -1079,6 +1152,10 @@ local function applyRoleLocally(player, roleKey)
 
     equipRoleItems(player, inv, def.equipped)
     applyRoleStats(player, def.stats)
+
+    if player.setUnlimitedCarry ~= nil then
+        player:setUnlimitedCarry(roleKey == "builder")
+    end
 
     modData.EE_role = roleKey
     modData.EE_reviveEnabled = true

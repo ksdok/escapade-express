@@ -72,7 +72,10 @@ escapade-express/
 │   ├── EE-10-plan-test.md
 │   ├── EE-11-objets-roles.md
 │   ├── EE-12-nouveaux-roles.md
-│   └── EE-13-choix-role.md
+│   ├── EE-13-choix-role.md
+│   ├── EE-14-vehicle-explosion.md
+│   ├── EE-15-cle-batterie-hordes.md
+│   └── EE-16-role-builder.md
 │
 └── EscapadeExpress/                               # le mod (à installer dans ~/Zomboid/mods/)
     ├── mod.info                                   # manifeste (require=PillowsRandomScenarios)
@@ -270,7 +273,7 @@ Voir `project-state.md` pour le backlog complet et `specs/` pour les spécificat
 | EE-13 | Choix de rôle post-spawn avec UI | ✅ |
 | EE-14 | Explosion du véhicule d'escape après démarrage | ✅ |
 | EE-15 | Clé, batterie déchargée et hordes par ramassage | ✅ |
-| EE-16 | Rôle Builder (construction illimitée) | ⏳ |
+| EE-16 | Rôle Builder (construction illimitée) | ✅ |
 
 ## Repo
 
