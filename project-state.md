@@ -51,7 +51,11 @@
 - Un test solo du 2026-07-18 a montre que la preparation serveur du scenario peut arriver trop tot: squares du parking/bidon/cle/batterie indisponibles au `OnGameStart`, donc aucun objet d'escape n'est spawn et la cle reste introuvable en jeu
 - EE-17 est maintenant implemente en code cote serveur: retry differe du van, du bidon, de la cle et de la batterie tant que les squares du mall ne sont pas prets
 - Pour contourner le non-chargement des squares trop lointains, le spawn joueurs a ete rapproche du parking et le vehicule d'escape a ete deplace pres de la zone de depart
-- Le prochain focus doit maintenant verifier en solo puis en LAN EE-17 avec EE-15 (objets d'escape + hordes), EE-16 (builder/refill), ainsi que la validation en jeu finale du roster EE-11
+- Un test recent montre un nouveau crash Lua serveur dans `findPlayerHoldingItem()` / `checkObjectiveItemsPickedUp()` pendant la surveillance des objets EE-15; un ticket EE-18 est necessaire avant de poursuivre la validation
+- Un correctif initial EE-18 est maintenant code: declaration anticipee de `getScenarioPlayers()` + garde defensive dans `findPlayerHoldingItem()` pour eviter l'appel sur `nil`; validation en jeu encore a faire
+- Un nouveau besoin gameplay a ete identifie: nettoyer les zombies dans un rayon de 50 autour du spawn au demarrage pour laisser le temps de choisir les roles; ticket EE-19 cree
+- EE-19 est maintenant implemente et valide en jeu: nettoyage ponctuel des zombies autour du spawn via zone safe shared (rayon 50), ce qui laisse le temps de choisir les roles au depart
+- Le prochain focus doit maintenant verifier en solo puis en LAN EE-18 avec EE-17 + EE-15 (surveillance objets, objets d'escape + hordes), EE-16 (builder/refill), ainsi que la validation en jeu finale du roster EE-11
 
 ### Concept (VALIDE)
 - 4 joueurs coop, debutants
@@ -140,6 +144,8 @@
 - [x] EE-15 (M) - Cle de vehicule, batterie déchargee et hordes declenchees par ramassage d'objet-cle (bidon/cle/batterie)
 - [x] EE-16 (S) - Role Builder: skills construction a 10, setUnlimitedCarry, stock massif, re-garnissage periodique EveryTenMinutes
 - [ ] EE-17 (M) - Retarder et re-essayer le spawn du vehicule et des objets d'escape tant que les squares du mall ne sont pas charges
+- [ ] EE-18 (S) - Corriger le crash serveur `findPlayerHoldingItem` / `checkObjectiveItemsPickedUp` quand la surveillance des objets tourne avec des references encore `nil`
+- [x] EE-19 (S/M) - Nettoyer les zombies dans un rayon de 50 autour du spawn au lancement pour securiser le choix initial des roles
 
 ---
 
@@ -216,3 +222,8 @@
 - 2026-07-18: EE-16 implemente: role Builder ajoute serveur/client/picker, `setUnlimitedCarry` aligne sur le role, re-garnissage `EveryTenMinutes` ajoute cote serveur, verification `luac -p` OK
 - 2026-07-18: Test solo post-EE-16: logs `[EE]` confirment que `prepareScenario()` tente le spawn trop tot (`square du parking`/`bidon`/`batterie` introuvables, `cle de vehicule indisponible`); ticket EE-17 et spec dedies a creer
 - 2026-07-18: EE-17 implemente en code cote serveur: `worldObjectsPrepared`, `tryPrepareWorldObjects()`, retries sur `OnGameStart` / `RolePickerReady` / `EveryOneMinute`, logs differe/succes final; validation en jeu encore a faire
+- 2026-07-18: Test post-EE-17 avec spawn/vehicule rapproches: le van spawn maintenant bien a `11370,8955`, mais la log montre un stack trace serveur `Object tried to call nil in findPlayerHoldingItem`; ticket EE-18 et spec dedies a creer
+- 2026-07-19: Correctif initial EE-18 code dans `EscapadeExpressServer.lua` (forward declaration de `getScenarioPlayers`, guard defensif dans `findPlayerHoldingItem`), verification syntaxe `luac -p` OK; validation en jeu restante
+- 2026-07-19: Ticket EE-19 cree pour nettoyer les zombies dans un rayon de 50 autour du spawn au lancement afin de laisser le temps de choisir les roles
+- 2026-07-19: EE-19 implemente en code dans `EscapadeExpressServer.lua` avec config shared `safeStart` (x=11371, y=8945, z=0, rayon=50), retrait one-shot des zombies a l'initialisation, verification `luac -p` OK
+- 2026-07-19: Validation en jeu EE-19 OK: la zone safe de depart laisse bien le temps de choisir les roles

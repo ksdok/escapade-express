@@ -29,6 +29,7 @@ local Server = {
     bidonHordeTriggered = false,
     keyHordeTriggered = false,
     batteryHordeTriggered = false,
+    startSafeZoneCleared = false,
     startTime = nil,
     powerOutageDone = false,
     fireDone = false,
@@ -60,8 +61,10 @@ local MALL_ENTRANCES = EE_Config.entrances
 local SHOPS = EE_Config.shops
 local POWER_OUTAGE_CENTER = EE_Config.powerOutageCenter
 local POWER_OUTAGE_RADIUS = EE_Config.powerOutageRadius
+local SAFE_START = EE_Config.safeStart or {x = EE_Config.spawnArea and math.floor((EE_Config.spawnArea.x1 + EE_Config.spawnArea.x2) / 2) or PARKING_X, y = EE_Config.spawnArea and math.floor((EE_Config.spawnArea.y1 + EE_Config.spawnArea.y2) / 2) or PARKING_Y, z = EE_Config.spawnArea and EE_Config.spawnArea.z or PARKING_Z, radius = 50}
 
 local vehicleExplosionTick = nil
+local getScenarioPlayers = nil
 
 -- Roles: 17 roles uniques pour les slots prioritaires, Civil restant
 -- selectionnable manuellement et attribuable en fallback automatique.
@@ -1611,7 +1614,7 @@ local function playerInventoryContainsItem(player, item)
 end
 
 local function findPlayerHoldingItem(item)
-    if item == nil then return nil end
+    if item == nil or getScenarioPlayers == nil then return nil end
 
     for _, player in ipairs(getScenarioPlayers()) do
         if playerInventoryContainsItem(player, item) then
@@ -1693,6 +1696,53 @@ end
 -- INITIALISATION DU SCENARIO
 -- ============================================================
 
+local function clearInitialSpawnSafeZone()
+    if Server.startSafeZoneCleared then
+        return true
+    end
+
+    if getCell == nil then
+        return false
+    end
+
+    local cell = getCell()
+    if cell == nil or cell.getZombieList == nil then
+        return false
+    end
+
+    local centerSquare = cell:getGridSquare(SAFE_START.x, SAFE_START.y, SAFE_START.z)
+    if centerSquare == nil then
+        return false
+    end
+
+    local zombies = cell:getZombieList()
+    if zombies == nil then
+        return false
+    end
+
+    local removed = 0
+    local radius = SAFE_START.radius or 50
+    local radiusSquared = radius * radius
+
+    for i = zombies:size() - 1, 0, -1 do
+        local zombie = zombies:get(i)
+        if zombie ~= nil and zombie:getSquare() ~= nil then
+            local zombieZ = zombie.getZ ~= nil and math.floor(zombie:getZ()) or SAFE_START.z
+            local dx = zombie:getX() - SAFE_START.x
+            local dy = zombie:getY() - SAFE_START.y
+            if zombieZ == SAFE_START.z and (dx * dx + dy * dy) <= radiusSquared then
+                zombie:removeFromWorld()
+                zombie:removeFromSquare()
+                removed = removed + 1
+            end
+        end
+    end
+
+    Server.startSafeZoneCleared = true
+    print("[EE] Zone safe initiale nettoyee: " .. tostring(removed) .. " zombies retires")
+    return true
+end
+
 local function resetScenarioState()
     unregisterVehicleExplosionTick()
 
@@ -1719,6 +1769,7 @@ local function resetScenarioState()
     Server.bidonHordeTriggered = false
     Server.keyHordeTriggered = false
     Server.batteryHordeTriggered = false
+    Server.startSafeZoneCleared = false
     Server.startTime = nil
     Server.powerOutageDone = false
     Server.fireDone = false
@@ -1746,6 +1797,10 @@ local function prepareScenario()
         Server.startTime = nil
 
         print("[EE] Scenario prepare, en attente du choix des roles")
+    end
+
+    if not Server.startSafeZoneCleared then
+        clearInitialSpawnSafeZone()
     end
 
     return tryPrepareWorldObjects()
@@ -1840,7 +1895,7 @@ local REVIVE_HEALTH = 0.5
 local RESPAWN_HEALTH = 0.3
 local REVIVE_RADIUS = 10
 
-local function getScenarioPlayers()
+getScenarioPlayers = function()
     local result = {}
 
     if getOnlinePlayers ~= nil then

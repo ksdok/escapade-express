@@ -66,6 +66,9 @@ EE_Config.spawnTiles = EE_Config.worldRectToCellSpawns(
     EE_Config.spawnArea.z
 )
 
+-- Zone safe initiale pour laisser le temps de choisir un role.
+EE_Config.safeStart = {x = 11371, y = 8945, z = 0, radius = 50}
+
 -- Parking valide releve en jeu
 EE_Config.parking = {x = 11370, y = 8955, z = 0}
 
