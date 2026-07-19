@@ -56,8 +56,8 @@ end
 
 -- Spawn valide releve en jeu: rectangle interieur du mall.
 -- `spawn` sert d'ancre/metadata; `spawnTiles` couvre toute la zone jouable.
-EE_Config.spawnArea = {x1 = 11356, y1 = 8946, x2 = 11360, y2 = 8944, z = 0}
-EE_Config.spawn = EE_Config.worldPointToCellPoint(11358, 8945, 0)
+EE_Config.spawnArea = {x1 = 11367, y1 = 8946, x2 = 11375, y2 = 8944, z = 0}
+EE_Config.spawn = EE_Config.worldPointToCellPoint(11371, 8945, 0)
 EE_Config.spawnTiles = EE_Config.worldRectToCellSpawns(
     EE_Config.spawnArea.x1,
     EE_Config.spawnArea.y1,
@@ -66,8 +66,11 @@ EE_Config.spawnTiles = EE_Config.worldRectToCellSpawns(
     EE_Config.spawnArea.z
 )
 
+-- Zone safe initiale pour laisser le temps de choisir un role.
+EE_Config.safeStart = {x = 11371, y = 8945, z = 0, radius = 50}
+
 -- Parking valide releve en jeu
-EE_Config.parking = {x = 11189, y = 8739, z = 0}
+EE_Config.parking = {x = 11370, y = 8955, z = 0}
 
 -- PLACEHOLDER: remplacer par les coords reelles du point de respawn
 EE_Config.respawn = {x = 11220, y = 8520, z = 0}
