@@ -12,8 +12,9 @@ avec le mode debug.
 
 | Variable | Valeur | Usage |
 |----------|--------|-------|
-| `SPAWN` | xcell=37, ycell=28, x=120, y=120, z=0 | Spawn arriere-boutique |
-| `PARKING_X/Y/Z` | 11250, 8550, 0 | Parking du mall (vehicule) |
+| `spawnArea` | X=11335..11342, Y=8957..8960, Z=0 | Zone de spawn joueurs |
+| `spawn` | X=11339, Y=8959, Z=0 | Point d'ancrage du spawn |
+| `parking` | 11345, 8957, 0 | Position du vehicule d'escape |
 | `MALL_ENTRANCES[1]` | 11200, 8400, 0 | Entree nord (spawn zombies) |
 | `MALL_ENTRANCES[2]` | 11100, 8500, 0 | Entree sud |
 | `MALL_ENTRANCES[3]` | 11300, 8450, 0 | Entree est |
@@ -24,7 +25,7 @@ avec le mode debug.
 
 | Variable | Valeur | Usage |
 |----------|--------|-------|
-| `PARKING_X/Y/Z` | 11250, 8550, 0 | Parking (vehicule) |
+| `parking` | 11345, 8957, 0 | Position du vehicule d'escape |
 | `GAS_CAN_LOCATION` | 11170, 8490, 0 | Bidon d'essence |
 | `RESPAWN_X/Y/Z` | 11220, 8520, 0 | Point de respawn |
 | `cutPower centerX/Y` | 11200, 8450, 0 | Centre de la zone coupure elec |
@@ -65,11 +66,13 @@ Creer `media/lua/shared/EscapadeExpressConfig.lua`:
 -- ============================================================
 
 EE_Config = {
-    -- Spawn arriere-boutique (format cell)
-    spawn = {xcell = 37, ycell = 28, x = 120, y = 120, z = 0},
+    -- Zone de spawn joueurs (format monde)
+    spawnArea = {x1 = 11335, y1 = 8960, x2 = 11342, y2 = 8957, z = 0},
+    spawn = EE_Config.worldPointToCellPoint(11339, 8959, 0),
+    safeStart = {x = 11339, y = 8959, z = 0, radius = 20},
 
-    -- Parking du mall (format monde)
-    parking = {x = 11250, y = 8550, z = 0},
+    -- Position du vehicule d'escape (format monde)
+    parking = {x = 11345, y = 8957, z = 0},
 
     -- Point de respawn (distinct du parking)
     respawn = {x = 11220, y = 8520, z = 0},

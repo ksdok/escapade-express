@@ -110,7 +110,7 @@ toutes les mecaniques fonctionnent en solo d'abord, puis en LAN (multiplayer).
 ### T-SOLO-08: Vehicule et bidon
 
 **Etapes:**
-1. Aller au parking (coords placeholder 11250, 8550)
+1. Aller au parking (coords 11345, 8957)
 2. Observer le vehicule
 3. Chercher le bidon d'essence (coords placeholder 11170, 8490)
 

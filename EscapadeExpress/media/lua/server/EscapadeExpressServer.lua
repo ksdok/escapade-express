@@ -68,7 +68,7 @@ if SAFE_START == nil then
         x = PARKING_X,
         y = PARKING_Y,
         z = PARKING_Z,
-        radius = 50,
+        radius = 20,
     }
     print("[EE] WARNING: safeStart absent de la config shared, fallback sur le parking")
 end

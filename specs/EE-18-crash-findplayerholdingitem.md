@@ -5,7 +5,7 @@
 Un test solo recent avec EE-17 actif montre que le vehicule d'escape spawn maintenant correctement quand il est rapproche de la zone de depart, mais qu'une erreur Lua serveur survient juste apres.
 
 Log observe dans `DebugLog.txt`:
-- `[EE] Vehicule d'escape spawn au parking (11370,8955).`
+- `[EE] Vehicule d'escape spawn au parking (11345,8957).`
 - `STACK TRACE`
 - `function: findPlayerHoldingItem -- file: EscapadeExpressServer.lua line # 1616`
 - `function: checkObjectiveItemsPickedUp -- file: EscapadeExpressServer.lua line # 1678`

@@ -19,7 +19,7 @@ Le scénario actuel a deux étapes d'évasion: trouver le bidon d'essence → fa
 - `onClientCommand` (ligne 1632): handler commandes client
 
 ### Config (`EscapadeExpressConfig.lua`)
-- `EE_Config.parking` = {x=11189, y=8739, z=0}
+- `EE_Config.parking` = {x=11345, y=8957, z=0}
 - `EE_Config.gasCan` = {x=11174, y=8432, z=4}
 - `EE_Config.entrances` = 3 entrées du mall
 

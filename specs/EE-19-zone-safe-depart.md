@@ -1,4 +1,4 @@
-# EE-19 — Zone safe de depart (aucun zombie dans un rayon de 50)
+# EE-19 — Zone safe de depart (aucun zombie dans un rayon de 20)
 
 ## Contexte
 
@@ -17,7 +17,7 @@ Impact:
 
 ## Objectif
 
-Garantir qu'au lancement du scenario il n'y ait aucun zombie dans un rayon de 50 tiles autour de la zone de spawn.
+Garantir qu'au lancement du scenario il n'y ait aucun zombie dans un rayon de 20 tiles autour de la zone de spawn.
 
 Le but est de laisser une courte fenetre de securite pour:
 - apparaitre correctement
@@ -29,7 +29,7 @@ Le but est de laisser une courte fenetre de securite pour:
 
 ### 1. Nettoyage initial des zombies autour du spawn
 
-Au demarrage du scenario, cote serveur, supprimer ou neutraliser tous les zombies presents dans un rayon de 50 tiles autour du centre du spawn.
+Au demarrage du scenario, cote serveur, supprimer ou neutraliser tous les zombies presents dans un rayon de 20 tiles autour du centre du spawn.
 
 Comportement attendu:
 - zone cible = point de spawn / zone de depart actuelle
@@ -88,7 +88,7 @@ Mais:
 
 ## Criteres d'acceptation
 
-1. Au demarrage, aucun zombie n'est present dans un rayon de 50 autour du spawn
+1. Au demarrage, aucun zombie n'est present dans un rayon de 20 autour du spawn
 2. Les joueurs peuvent choisir leur role sans pression immediate
 3. Le nettoyage fonctionne en solo et en multi
 4. Les zombies peuvent ensuite revenir naturellement plus tard
