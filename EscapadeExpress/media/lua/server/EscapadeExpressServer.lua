@@ -61,7 +61,17 @@ local MALL_ENTRANCES = EE_Config.entrances
 local SHOPS = EE_Config.shops
 local POWER_OUTAGE_CENTER = EE_Config.powerOutageCenter
 local POWER_OUTAGE_RADIUS = EE_Config.powerOutageRadius
-local SAFE_START = EE_Config.safeStart or {x = EE_Config.spawnArea and math.floor((EE_Config.spawnArea.x1 + EE_Config.spawnArea.x2) / 2) or PARKING_X, y = EE_Config.spawnArea and math.floor((EE_Config.spawnArea.y1 + EE_Config.spawnArea.y2) / 2) or PARKING_Y, z = EE_Config.spawnArea and EE_Config.spawnArea.z or PARKING_Z, radius = 50}
+local SAFE_START = EE_Config.safeStart
+
+if SAFE_START == nil then
+    SAFE_START = {
+        x = PARKING_X,
+        y = PARKING_Y,
+        z = PARKING_Z,
+        radius = 50,
+    }
+    print("[EE] WARNING: safeStart absent de la config shared, fallback sur le parking")
+end
 
 local vehicleExplosionTick = nil
 local getScenarioPlayers = nil
@@ -1702,35 +1712,43 @@ local function clearInitialSpawnSafeZone()
     end
 
     if getCell == nil then
-        return false
+        return false -- runtime pas encore pret, retry plus tard
     end
 
     local cell = getCell()
     if cell == nil or cell.getZombieList == nil then
-        return false
+        return false -- zone pas encore chargee, retry plus tard
     end
 
+    -- Le square central sert de garde simple pour verifier que la zone safe
+    -- existe bien dans le monde charge avant de scanner/supprimer les zombies.
     local centerSquare = cell:getGridSquare(SAFE_START.x, SAFE_START.y, SAFE_START.z)
     if centerSquare == nil then
-        return false
+        return false -- zone pas encore chargee, retry plus tard
     end
 
     local zombies = cell:getZombieList()
     if zombies == nil then
-        return false
+        return false -- rien a scanner pour l'instant, retry plus tard
     end
 
     local removed = 0
-    local radius = SAFE_START.radius or 50
+    local radius = SAFE_START.radius
     local radiusSquared = radius * radius
 
     for i = zombies:size() - 1, 0, -1 do
         local zombie = zombies:get(i)
         if zombie ~= nil and zombie:getSquare() ~= nil then
-            local zombieZ = zombie.getZ ~= nil and math.floor(zombie:getZ()) or SAFE_START.z
+            local zombieZ = SAFE_START.z
+            local getZombieZ = zombie.getZ
+            if getZombieZ ~= nil then
+                zombieZ = math.floor(getZombieZ(zombie))
+            end
+
             local dx = zombie:getX() - SAFE_START.x
             local dy = zombie:getY() - SAFE_START.y
             if zombieZ == SAFE_START.z and (dx * dx + dy * dy) <= radiusSquared then
+                -- Sequence conservee telle quelle car validee en jeu sur B41.
                 zombie:removeFromWorld()
                 zombie:removeFromSquare()
                 removed = removed + 1
